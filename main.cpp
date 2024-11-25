@@ -1,248 +1,275 @@
 #include "FEHLCD.h"
 #include "FEHUtility.h"
+#include "FEHImages.h"
 #include <Windows.h>
+#include <array>
+#include <vector>
+#include <iostream>
+
 using namespace std;
 
-void createMenu();
+#define CHAR_HEIGHT 17
+#define CHAR_WIDTH 12
+int map_num = 0;
 
 /*
-    SDP Menu Creation
-
-    This creates a menu with 5 buttons the user can press. The options are
-    "Play", "Statistics", "Instructions", "Credits", or "Quit".
+    Buttons and Utility
 */
 
-void generateNextMap();
-
-// Create the blueprint for the Credits function
-void rollCredits();
-
-void displayInstructions();
-
-void loadStats();
-
-void quit();
+bool BoundsCheck(int x, int y, array<int, 4> box)
+{
+    bool x_check = x >= box[0] && x <= box[2];
+    bool y_check = y >= box[1] && y <= box[3];
+    return x_check && y_check;
+}
 
 class Button
 {
 private:
-    float x_pos1, y_pos1, x_pos2, y_pos2;
-    char label[10];
+    int x, y, width, height, text_length, x_t, y_t;
+    unsigned int border_color = WHITE, fill_color = BLACK, text_color = WHITE;
+    char text[30];
+    void (*function)();
 
 public:
-    Button(int x1, int y1, int x2, int y2);
-    bool pressed(float x_press, float y_press);
+    Button(int w = 1, int h = 1) : width(w), height(h) {}
+
+    void SetXCoord(int x1)
+    {
+        x = x1;
+    }
+
+    void SetYCoord(int y1)
+    {
+        y = y1;
+    }
+
+    void SetXProp(float x_prop)
+    {
+        x = x_prop * LCD_WIDTH - width / 2;
+    }
+
+    void SetYProp(float y_prop)
+    {
+        y = y_prop * LCD_HEIGHT - height / 2;
+    }
+
+    void SetBorderColor(unsigned int color)
+    {
+        border_color = color;
+    }
+
+    void SetFillColor(unsigned int color)
+    {
+        fill_color = color;
+    }
+
+    void SetTextColor(unsigned int color)
+    {
+        text_color = color;
+    }
+
+    void SetText(const char *str)
+    {
+        text_length = strlen(str);
+        strcpy(text, str);
+    }
+
+    void SetWidth(int w)
+    {
+        width = w;
+    }
+
+    void SetHeight(int h)
+    {
+        height = h;
+    }
+
+    void SetFunction(void funct())
+    {
+        function = funct;
+    }
+
+    void Create()
+    {
+        LCD.SetFontColor(fill_color);
+        LCD.FillRectangle(x, y, width, height);
+        LCD.SetFontColor(border_color);
+        LCD.DrawRectangle(x, y, width, height);
+        x_t = x + (width - (text_length * CHAR_WIDTH)) / 2, y_t = y + (height - CHAR_HEIGHT) / 2;
+        LCD.SetFontColor(text_color);
+        LCD.WriteAt(text, x_t, y_t);
+    }
+
+    void Check(float x_press, float y_press)
+    {
+        array<int, 4> button = {x, y, x + width, y + height};
+        if (BoundsCheck(x_press, y_press, button))
+        {
+            function();
+        }
+    }
 };
 
-Button::Button(int x1, int y1, int x2, int y2)
+void WriteCenter(const char *str, int y)
 {
-    LCD.SetFontColor(WHITE);
-    LCD.DrawRectangle(x1, y1, x2 - x1, y2 - y1);
-    LCD.FillRectangle(x1, y1, x2 - x1, y2 - y1);
-    x_pos1 = x1;
-    y_pos1 = y1;
-    x_pos2 = x2;
-    y_pos2 = y2;
+    int length = strlen(str) * CHAR_WIDTH;
+    int x = (LCD_WIDTH / 2) - length / 2;
+    LCD.WriteAt(str, x, y);
 }
 
-bool Button::pressed(float x_press, float y_press)
+// Blueprints
+void Menu(), GenerateNextMap(), Credits(), Instructions(), Statistics(), Quit();
+
+/*
+    SDP Menu Creation
+
+    Create a menu screen with 5 buttons the user can press. The options are
+    Play, "Statistics", "Instructions", "Credits", or Quit.
+    Each of the 3 info pages have a Back Button to return to Menu.
+*/
+void Menu()
 {
-    if (x_press >= x_pos1 && x_press <= x_pos2 && y_press <= y_pos2 && y_press >= y_pos1)
+    LCD.SetBackgroundColor(BLACK);
+    LCD.Clear();
+
+    int width, height = 25, y_diff = 10, y_start = 40;
+    float x_prop = 0.5;
+    const char *labels[5] = {"Play", "Credits", "Instructions", "Statistics", "Quit"};
+    void (*functions[5])() = {GenerateNextMap, Credits, Instructions, Statistics, Quit};
+
+    Button menu_buttons[5];
+
+    for (int b = 0; b < 5; b++)
     {
-        return true;
+        width = (strlen(labels[b]) + 2) * CHAR_WIDTH;
+        menu_buttons[b].SetWidth(width);
+        menu_buttons[b].SetHeight(height);
+        menu_buttons[b].SetXProp(x_prop);
+        menu_buttons[b].SetYCoord(y_start + b * (height + y_diff));
+        menu_buttons[b].SetText(labels[b]);
+        menu_buttons[b].SetBorderColor(LIGHTGRAY);
+        menu_buttons[b].SetFillColor(MEDIUMBLUE);
+        menu_buttons[b].SetTextColor(LIGHTGRAY);
+        menu_buttons[b].SetFunction(functions[b]);
+        menu_buttons[b].Create();
     }
-    return false;
+    while (true)
+    {
+        int x, y;
+        while (!LCD.Touch(&x, &y))
+        {
+        }
+        while (LCD.Touch(&x, &y))
+        {
+        }
+        for (int c = 0; c < 5; c++)
+        {
+            menu_buttons[c].Check(x, y);
+        }
+    }
 }
 
-void pressLoop(Button);
-
-void pressLoop(Button button)
+void BackButtonCheck()
 {
-    float x, y, x_trash, y_trash;
-
+    Button backButton;
+    backButton.SetWidth(100);
+    backButton.SetHeight(25);
+    backButton.SetXProp(0.2);
+    backButton.SetYProp(0.9);
+    backButton.SetText("Back");
+    backButton.SetBorderColor(LIGHTGRAY);
+    backButton.SetFillColor(MEDIUMBLUE);
+    backButton.SetTextColor(LIGHTGRAY);
+    backButton.SetFunction(Menu);
+    backButton.Create();
+    float x, y;
     while (true)
     {
         while (!LCD.Touch(&x, &y))
         {
-        };
-        // Wait for the user to release the press
-        while (LCD.Touch(&x_trash, &y_trash))
-        {
-        };
-        if (button.pressed(x, y))
-        {
-            createMenu();
-            break;
         }
-        Sleep(10);
+        while (LCD.Touch(&x, &y))
+        {
+        }
+        backButton.Check(x, y);
     }
 }
 
-void createMenu()
-{
-    LCD.SetBackgroundColor(BLACK);
-    LCD.Clear();
-    LCD.SetFontColor(WHITE);
-
-    // This code creates all the buttons for the main menu
-    Button playButton(80, 80, 240, 100);
-    Button creditsButton(80, 110, 240, 130);
-    Button instructionsButton(80, 140, 240, 160);
-    Button statsButton(80, 170, 240, 190);
-    Button quitButton(80, 200, 240, 220);
-
-    // Write the text inside the buttons
-    LCD.SetFontColor(BLACK);
-    LCD.WriteAt("Play", 135, 83);
-    LCD.WriteAt("Credits", 120, 113);
-    LCD.WriteAt("Instructions", 90, 143);
-    LCD.WriteAt("Statistics", 100, 173);
-    LCD.WriteAt("Quit", 135, 203);
-
-    // Create variables to determine the position of the click
-    float x, y;
-    float x_trash, y_trash;
-
-    // Determine if the user pressed the credits button
-
-    // if(GetKeyState(0x10) & 0x8000)
-    // {
-    //     rollCredits();
-    // }
-    while (true)
-    {
-        // Wait for the user to click the screen
-        while (!LCD.Touch(&x, &y))
-        {
-        };
-        // Wait for the user to release the press
-        while (LCD.Touch(&x_trash, &y_trash))
-        {
-        };
-        if (playButton.pressed(x, y))
-        {
-            generateNextMap();
-            break;
-        }
-        else if (creditsButton.pressed(x, y))
-        {
-            rollCredits();
-            break;
-        }
-        else if (instructionsButton.pressed(x, y))
-        {
-            displayInstructions();
-            break;
-        }
-        else if (statsButton.pressed(x, y))
-        {
-            loadStats();
-            break;
-        }
-        else if (quitButton.pressed(x, y))
-        {
-            quit();
-            break;
-        }
-        Sleep(10);
-    }
-}
-
-void generateNextMap()
-{
-    LCD.SetBackgroundColor(BLACK);
-    LCD.Clear();
-    LCD.SetFontColor(WHITE);
-    LCD.WriteAt("Play Game", 40, 80);
-
-    // Create a back button to return to the main menu
-    Button backButton(20, 200, 80, 220);
-    LCD.SetFontColor(BLACK);
-    LCD.WriteAt("Back", 25, 203);
-
-    float x, y;
-    float x_trash, y_trash;
-
-    // Wait for the user to click the screen
-
-    pressLoop(backButton);
-}
-
-void rollCredits()
+void Credits()
 {
     /*
-        This function resets the background color and clears the
-        screen. It then write out the credits to the screen.
+      Reset the background color, clear the screen,
+      then write out the credits.
     */
     LCD.SetBackgroundColor(BLACK);
     LCD.Clear();
     LCD.SetFontColor(WHITE);
-    LCD.WriteAt("Created by Shreyash", 40, 80);
-    LCD.WriteAt("Purav and Jack Hanlon", 30, 100);
+    WriteCenter("Created by Shreyash", 80);
+    WriteCenter("Purav and Jack Hanlon", 100);
 
-    // Create a back button to return to the main menu
-    Button backButton(20, 200, 80, 220);
-    LCD.SetFontColor(BLACK);
-    LCD.WriteAt("Back", 25, 203);
-
-    float x, y;
-    float x_trash, y_trash;
-
-    pressLoop(backButton);
+    // Create and check a back button to return to the main menu
+    BackButtonCheck();
 }
 
-void displayInstructions()
+void Instructions()
 {
+    /*
+      Reset the background color, clear the screen,
+      then write out the instructions.
+    */
     LCD.SetBackgroundColor(BLACK);
     LCD.Clear();
     LCD.SetFontColor(WHITE);
-    LCD.WriteAt("INSTRUCTIONS", 90, 10);
-    LCD.WriteAt("__________________________", 10, 20);
-    LCD.WriteAt("Use WASD to move and CTRL", 10, 50);
-    LCD.WriteAt("to shoot. Move through", 10, 70);
-    LCD.WriteAt("the levels without", 10, 90);
-    LCD.WriteAt("dying and reach the end", 10, 110);
-    LCD.WriteAt("to move onto the next", 10, 130);
-    LCD.WriteAt("level. Complete all ", 10, 150);
-    LCD.WriteAt("levels to beat the game.", 10, 170);
+    WriteCenter("INSTRUCTIONS", 10);
+    WriteCenter("__________________________", 20);
+    WriteCenter("Use WASD to move and CTRL", 50);
+    WriteCenter("to shoot. Move through", 70);
+    WriteCenter("the levels without", 90);
+    WriteCenter("dying and reach the end", 110);
+    WriteCenter("to move onto the next", 130);
+    WriteCenter("level. Complete all ", 150);
+    WriteCenter("levels to beat the game.", 170);
 
-    // Create a back button to return to the main menu
-    Button backButton(20, 200, 80, 220);
-    LCD.SetFontColor(BLACK);
-    LCD.WriteAt("Back", 25, 203);
-
-    float x, y;
-    float x_trash, y_trash;
-
-    pressLoop(backButton);
+    // Create and check a back button to return to the main menu
+    BackButtonCheck();
 }
 
-void loadStats()
+void Statistics()
 {
+    /*
+      Reset the background color, clear the screen,
+      then write out the statistics.
+    */
     LCD.SetBackgroundColor(BLACK);
     LCD.Clear();
     LCD.SetFontColor(WHITE);
-    LCD.WriteAt("STATS", 130, 10);
-    LCD.WriteAt("__________________________", 10, 20);
+    WriteCenter("STATS", 10);
+    WriteCenter("__________________________", 20);
     LCD.WriteAt("KILLS: 0", 50, 40);
     LCD.WriteAt("LEVELS COMPLETED: 0", 50, 60);
     LCD.WriteAt("GREAT ENEMIES FELL: 1", 50, 80);
 
-    // Create a back button to return to the main menu
-    Button backButton(20, 200, 80, 220);
-    LCD.SetFontColor(BLACK);
-    LCD.WriteAt("Back", 25, 203);
-
-    float x, y;
-    float x_trash, y_trash;
-
-    pressLoop(backButton);
+    /*
+      Create and check a back button to return to the main menu
+    */
+    BackButtonCheck();
 }
 
-void quit()
+void Quit()
 {
     LCD.SetBackgroundColor(BLACK);
     LCD.Clear();
+    Sleep(2500);
+    WriteCenter("Did you really think we", 50);
+    WriteCenter("will let you quit with a", 70);
+    WriteCenter("button?", 90);
+    Sleep(5000);
+    LCD.Clear();
+    WriteCenter("Why not?", 50);
+    Sleep(2000);
+    WriteCenter("We are good devs.", 70);
+    Sleep(2000);
     exit(0);
 }
 
@@ -252,7 +279,7 @@ int main()
     LCD.SetBackgroundColor(BLACK);
     LCD.Clear();
 
-    createMenu();
+    Menu();
 
     while (1)
     {
@@ -260,4 +287,110 @@ int main()
         // Never end
     }
     return 0;
+}
+
+// This is where the fun begins
+
+/*
+    Map Generation here!
+*/
+
+class Platform
+{
+private:
+    int x, y, width, height;
+    unsigned int color;
+
+public:
+    Platform(int x1, int y1, int w, int h, unsigned int color1) : x(x1), y(y1), width(w), height(h), color(color1)
+    {
+        Draw();
+    }
+
+    void Draw()
+    {
+        LCD.SetFontColor(color);
+        LCD.DrawRectangle(x, y, width, height);
+        LCD.FillRectangle(x, y, width, height);
+    }
+
+    array<int, 4> Collision()
+    {
+        array<int, 4> box = {x, y, x + width, y + height};
+        return box;
+    }
+};
+
+class Tile
+{
+private:
+    int num;
+    array<int, 4> connections;
+    vector<Platform> platforms;
+
+public:
+    Tile(int n) : num(n) {}
+
+    void AddPlatform(Platform platform)
+    {
+        platforms.push_back(platform);
+    }
+
+    void Draw()
+    {
+        for (int i = 0; i < platforms.size(); i++)
+        {
+            platforms[i].Draw();
+        }
+    }
+
+    bool CollisionCheck(int x, int y)
+    {
+        bool check = false;
+        for (int i = 0; i < platforms.size(); i++)
+        {
+            if (BoundsCheck(x, y, platforms[i].Collision()))
+            {
+                check = true;
+            }
+        }
+        return check;
+    }
+
+    int Num()
+    {
+        return num;
+    }
+
+    /*
+      0 = left, 1 = up, 2 = right, 3 = down
+    */
+    int NextTile(int direction)
+    {
+        return connections[direction];
+    }
+};
+
+class Map
+{
+private:
+    int num;
+    int current_tile = 0;
+    vector<Tile> tiles;
+
+public:
+    void AddTile(Tile tile)
+    {
+        tiles.push_back(tile);
+    }
+    void DrawNextTile()
+    {
+    }
+    // if sprite is
+};
+
+void GenerateNextMap()
+{
+    LCD.Clear();
+    BackButtonCheck();
 }
