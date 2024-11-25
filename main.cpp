@@ -1,3 +1,9 @@
+/**
+ * @author Shreyash Purav
+ * @date 11/17/24
+ * Instructor: Clingan 12:40
+ */
+
 #include "FEHLCD.h"
 #include "FEHUtility.h"
 #include "FEHImages.h"
@@ -23,7 +29,7 @@ bool BoundsCheck(int x, int y, array<int, 4> box)
     return x_check && y_check;
 }
 
-class Button
+class Player
 {
 private:
     int x, y, width, height, text_length, x_t, y_t;
