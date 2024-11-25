@@ -29,7 +29,7 @@ bool BoundsCheck(int x, int y, array<int, 4> box)
     return x_check && y_check;
 }
 
-class Player
+class Button
 {
 private:
     int x, y, width, height, text_length, x_t, y_t;
@@ -202,6 +202,127 @@ void BackButtonCheck()
     }
 }
 
+class Player
+{
+private:
+    float xPlayer, yPlayer, t, y_0, v_i, g;
+    bool right;
+
+public:
+    FEHImage playerLeft, playerRight;
+    Player()
+    {
+        xPlayer = 100;
+        yPlayer = 100;
+        t = 0;
+        v_i = -30;
+        g = 10;
+        right = true;
+        playerLeft.Open("protoustros_01.png");
+        playerRight.Open("protoustros_02.png");
+        playerRight.Draw(xPlayer, yPlayer);
+    }
+    void moveRight()
+    {
+        LCD.Clear();
+        xPlayer += 2;
+        playerRight.Draw(xPlayer, yPlayer);
+        right = true;
+    }
+    void moveLeft()
+    {
+        LCD.Clear();
+        xPlayer -= 2;
+        playerLeft.Draw(xPlayer, yPlayer);
+        right = false;
+    }
+    void jump()
+    {
+        y_0 = yPlayer;
+        while (yPlayer <= y_0)
+        {
+            // Clear previous jumper
+            LCD.Clear();
+
+            // Change y coordinate
+            t += 0.1;
+            if (y_0 + v_i * t + 0.5 * g * t * t < y_0)
+            {
+                yPlayer = y_0 + v_i * t + 0.5 * g * t * t;
+            }
+            else
+            {
+                yPlayer = y_0;
+                if (right == true)
+                {
+                    playerRight.Draw(xPlayer, yPlayer);
+                }
+                else
+                {
+                    playerLeft.Draw(xPlayer, yPlayer);
+                }
+                break;
+            }
+            LCD.Clear();
+            if (right == true)
+            {
+                playerRight.Draw(xPlayer, yPlayer);
+            }
+            else
+            {
+                playerLeft.Draw(xPlayer, yPlayer);
+            }
+
+            if (GetAsyncKeyState(0x44) & 0x8000)
+            {
+                moveRight();
+            }
+            if (GetAsyncKeyState(0x41) & 0x8000)
+            {
+                moveLeft();
+            }
+
+            Sleep(10);
+        }
+        LCD.Update();
+        yPlayer = y_0;
+        t = 0;
+    }
+};
+
+// Create the blueprint for the button functions
+void GenerateNextMap();
+void Credits();
+void Instructions();
+void Statistics();
+void Quit();
+
+void GenerateNextMap()
+{
+    LCD.SetBackgroundColor(BLACK);
+    LCD.Clear();
+    Player player;
+    while (true)
+    {
+
+        if (GetAsyncKeyState(0x44) & 0x8000)
+        {
+            player.moveRight();
+        }
+        if (GetAsyncKeyState(0x41) & 0x8000)
+        {
+            player.moveLeft();
+        }
+        if ((GetAsyncKeyState(0x57)) & 0x8000)
+        {
+            player.jump();
+        }
+        Sleep(10);
+    }
+    // float x, y;
+    // float x_trash, y_trash;
+}
+
 void Credits()
 {
     /*
@@ -266,16 +387,6 @@ void Quit()
 {
     LCD.SetBackgroundColor(BLACK);
     LCD.Clear();
-    Sleep(2500);
-    WriteCenter("Did you really think we", 50);
-    WriteCenter("will let you quit with a", 70);
-    WriteCenter("button?", 90);
-    Sleep(5000);
-    LCD.Clear();
-    WriteCenter("Why not?", 50);
-    Sleep(2000);
-    WriteCenter("We are good devs.", 70);
-    Sleep(2000);
     exit(0);
 }
 
