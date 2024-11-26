@@ -238,6 +238,7 @@ public:
     }
     void jump()
     {
+        jumping = true;
         y_0 = yPlayer;
         while (yPlayer <= y_0)
         {
@@ -281,12 +282,79 @@ public:
             {
                 moveLeft();
             }
+            if ((GetAsyncKeyState(0x11)) & 0x8000)
+            {
+                shoot();
+            }
 
             Sleep(10);
         }
         LCD.Update();
         yPlayer = y_0;
         t = 0;
+        jumping = false;
+    }
+    void shoot()
+    {
+        float xBullet, yBullet;
+        xBullet = xPlayer + 20;
+        yBullet = yPlayer + 20;
+        LCD.Clear();
+        LCD.SetFontColor(WHITE);
+        LCD.DrawCircle(xBullet, yBullet, 2);
+        while (xBullet < 319)
+        {
+            if (GetAsyncKeyState(0x44) & 0x8000)
+            {
+                moveRight();
+            }
+            if (GetAsyncKeyState(0x41) & 0x8000)
+            {
+                moveLeft();
+            }
+            if ((GetAsyncKeyState(0x57)) & 0x8000)
+            {
+                jumping = true;
+            }
+
+            if (xBullet + 10 > 319)
+            {
+                LCD.Clear();
+                break;
+            }
+            xBullet += 5;
+            if (jumping == true)
+            {
+                LCD.Clear();
+                // Change y coordinate
+                t += 0.1;
+                if (y_0 + v_i * t + 0.5 * g * t * t < y_0)
+                {
+                    yPlayer = y_0 + v_i * t + 0.5 * g * t * t;
+                }
+                else
+                {
+                    yPlayer = y_0;
+                    if (right == true)
+                    {
+                        playerRight.Draw(xPlayer, yPlayer);
+                    }
+                    else
+                    {
+                        playerLeft.Draw(xPlayer, yPlayer);
+                    }
+                    LCD.Update();
+                    yPlayer = y_0;
+                    t = 0;
+                    jumping = false;
+                }
+            }
+            LCD.Clear();
+            playerRight.Draw(xPlayer, yPlayer);
+            LCD.DrawCircle(xBullet, yBullet, 2);
+            Sleep(10);
+        }
+        playerRight.Draw(xPlayer, yPlayer);
     }
 };
 
@@ -316,6 +384,10 @@ void GenerateNextMap()
         if ((GetAsyncKeyState(0x57)) & 0x8000)
         {
             player.jump();
+        }
+        if ((GetAsyncKeyState(0x11)) & 0x8000)
+        {
+            player.shoot();
         }
         Sleep(10);
     }
