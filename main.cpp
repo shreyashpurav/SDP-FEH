@@ -1,36 +1,46 @@
-/**
- * @author Shreyash Purav
- * @date 11/17/24
- * Instructor: Clingan 12:40
- */
-
 #include "FEHLCD.h"
 #include "FEHUtility.h"
 #include "FEHImages.h"
-#include <Windows.h>
+#include "Windows.h"
 #include <array>
 #include <vector>
 #include <iostream>
-#include <math.h>
-#include <cstdlib>
-#include <ctime>
 
 using namespace std;
 
 #define CHAR_HEIGHT 17
 #define CHAR_WIDTH 12
-int map_num = 0;
-int kills = 0;
-float enemySpeed = 1;
+#define GRAVITY 4
+array<int, 4> MAIN_PLATFORM = {40, 220, 280, 239};
 
 /*
     Buttons and Utility
 */
 
+bool ScreenBoundsCheck(array<int, 4> box)
+{
+    bool x_check = box[0] < 0 || box[2] > LCD_WIDTH;
+    bool y_check = box[1] < 0 || box[3] > LCD_HEIGHT;
+    return x_check || y_check;
+}
+
 bool BoundsCheck(int x, int y, array<int, 4> box)
 {
-    bool x_check = x >= box[0] && x <= box[2];
-    bool y_check = y >= box[1] && y <= box[3];
+    bool x_check = x > box[0] && x < box[2];
+    bool y_check = y > box[1] && y < box[3];
+    return x_check && y_check;
+}
+
+bool BoundsCheckBox(array<int, 4> box1, array<int, 4> box2)
+{
+    int box1_x1 = box1[0], box1_y1 = box1[1], box1_x2 = box1[2], box1_y2 = box1[3];
+    int box2_x1 = box2[0], box2_y1 = box2[1], box2_x2 = box2[2], box2_y2 = box2[3];
+    bool x1_check = (box1_x1 >= box2_x1 && box1_x1 <= box2_x2) || (box2_x1 >= box1_x1 && box2_x1 <= box1_x2);
+    bool x2_check = (box1_x2 >= box2_x2 && box1_x2 <= box2_x2) || (box2_x2 >= box1_x2 && box2_x2 <= box1_x2);
+    bool x_check = x1_check || x2_check;
+    bool y1_check = (box1_y1 >= box2_y1 && box1_y1 <= box2_y2) || (box2_y1 >= box1_y1 && box2_y1 <= box1_y2);
+    bool y2_check = (box1_y2 >= box2_y2 && box1_y2 <= box2_y2) || (box2_y2 >= box1_y2 && box2_y2 <= box1_y2);
+    bool y_check = y1_check || y2_check;
     return x_check && y_check;
 }
 
@@ -130,7 +140,7 @@ void WriteCenter(const char *str, int y)
 }
 
 // Blueprints
-void Menu(), GenerateNextMap(), Credits(), Instructions(), Statistics(), Quit();
+void Menu(), Play(), Credits(), Instructions(), Statistics(), Quit();
 
 /*
     SDP Menu Creation
@@ -147,7 +157,7 @@ void Menu()
     int width, height = 25, y_diff = 10, y_start = 40;
     float x_prop = 0.5;
     const char *labels[5] = {"Play", "Credits", "Instructions", "Statistics", "Quit"};
-    void (*functions[5])() = {GenerateNextMap, Credits, Instructions, Statistics, Quit};
+    void (*functions[5])() = {Play, Credits, Instructions, Statistics, Quit};
 
     Button menu_buttons[5];
 
@@ -204,521 +214,6 @@ void BackButtonCheck()
         {
         }
         backButton.Check(x, y);
-    }
-}
-
-class Enemy
-{
-private:
-    float xEnemy, yEnemy;
-    bool right, alive;
-
-public:
-    FEHImage enemyLeft, enemyRight;
-    Enemy()
-    {
-        int range = 2;
-        int randomNum = rand() % range;
-        enemyRight.Open("protoustros_02.png");
-        enemyLeft.Open("protoustros_01.png");
-        if (randomNum == 0)
-        {
-            xEnemy = 20;
-            yEnemy = 100;
-            right = true;
-            alive = true;
-            enemyRight.Draw(xEnemy, yEnemy);
-        }
-        else
-        {
-            xEnemy = 300;
-            yEnemy = 100;
-            right = false;
-            alive = true;
-            enemyLeft.Draw(xEnemy, yEnemy);
-        }
-    }
-    float getX()
-    {
-        return xEnemy;
-    }
-    float getY()
-    {
-        return yEnemy;
-    }
-    void setX(float x)
-    {
-        xEnemy = x;
-    }
-    void setY(float y)
-    {
-        yEnemy = y;
-    }
-    bool Alive()
-    {
-        return alive;
-    }
-    void setAlive(bool a)
-    {
-        alive = a;
-    }
-    bool getRight()
-    {
-        return right;
-    }
-    void setRight(bool answer)
-    {
-        right = answer;
-    }
-    void drawEnemy(Enemy name)
-    {
-        if (name.Alive())
-        {
-            if (name.getRight())
-            {
-                name.enemyRight.Draw(name.getX(), name.getY());
-            }
-            else
-            {
-                name.enemyLeft.Draw(name.getX(), name.getY());
-            }
-        }
-    }
-    void move()
-    {
-        if (alive)
-        {
-            if (right && xEnemy < 319)
-            {
-                xEnemy += enemySpeed;
-            }
-            else if (!right && xEnemy > 0)
-            {
-                xEnemy -= enemySpeed;
-            }
-        }
-    }
-};
-
-vector<Enemy> enemies;
-float spawnTime = 1000;
-
-class Player
-{
-private:
-    float xPlayer, yPlayer, t, y_0, v_i, g;
-    bool right, jumping;
-
-public:
-    FEHImage playerLeft, playerRight;
-    Player()
-    {
-        xPlayer = 100;
-        yPlayer = 100;
-        t = 0;
-        v_i = -30;
-        g = 10;
-        right = true;
-        jumping = false;
-        playerLeft.Open("protoustros_01.png");
-        playerRight.Open("protoustros_02.png");
-        playerRight.Draw(xPlayer, yPlayer);
-    }
-    float getX()
-    {
-        return xPlayer;
-    }
-    float getY()
-    {
-        return yPlayer;
-    }
-    bool getRight()
-    {
-        return right;
-    }
-    void moveRight()
-    {
-        LCD.Clear();
-        xPlayer += 2;
-        playerRight.Draw(xPlayer, yPlayer);
-        right = true;
-    }
-    void moveLeft()
-    {
-        LCD.Clear();
-        xPlayer -= 2;
-        playerLeft.Draw(xPlayer, yPlayer);
-        right = false;
-    }
-    void jump()
-    {
-        jumping = true;
-        y_0 = yPlayer;
-        while (yPlayer <= y_0)
-        {
-            // Clear previous jumper
-            LCD.Clear();
-
-            // Change y coordinate
-            t += 0.1;
-            if (y_0 + v_i * t + 0.5 * g * t * t < y_0)
-            {
-                yPlayer = y_0 + v_i * t + 0.5 * g * t * t;
-            }
-            else
-            {
-                yPlayer = y_0;
-                if (right == true)
-                {
-                    playerRight.Draw(xPlayer, yPlayer);
-                }
-                else
-                {
-                    playerLeft.Draw(xPlayer, yPlayer);
-                }
-                break;
-            }
-            LCD.Clear();
-            if (right == true)
-            {
-                playerRight.Draw(xPlayer, yPlayer);
-            }
-            else
-            {
-                playerLeft.Draw(xPlayer, yPlayer);
-            }
-
-            if (GetAsyncKeyState(0x44) & 0x8000)
-            {
-                moveRight();
-            }
-            if (GetAsyncKeyState(0x41) & 0x8000)
-            {
-                moveLeft();
-            }
-            if ((GetAsyncKeyState(0x11)) & 0x8000)
-            {
-                shoot();
-            }
-
-            Sleep(10);
-        }
-        LCD.Update();
-        yPlayer = y_0;
-        t = 0;
-        jumping = false;
-    }
-    void shoot()
-    {
-        float xBullet, yBullet;
-        xBullet = xPlayer + 20;
-        yBullet = yPlayer + 20;
-        LCD.Clear();
-        LCD.SetFontColor(WHITE);
-        LCD.DrawCircle(xBullet, yBullet, 2);
-        if (right == true)
-        {
-            while (xBullet < 319)
-            {
-                if (GetAsyncKeyState(0x44) & 0x8000)
-                {
-                    moveRight();
-                }
-                if (GetAsyncKeyState(0x41) & 0x8000)
-                {
-                    moveLeft();
-                }
-                // if ((GetAsyncKeyState(0x57)) & 0x8000)
-                // {
-                //     jumping = true;
-                // }
-                if (xBullet + 8 > 319)
-                {
-                    LCD.Clear();
-                    break;
-                }
-                // if (enemy1.Alive())
-                // {
-                //     if (abs(xBullet - enemy1.getX()) < 10)
-                //     {
-                //         LCD.Clear();
-                //         enemy1.setAlive(0);
-                //         kills++;
-                //         enemy1.setY(20);
-                //         enemy1.drawEnemy(enemy1);
-                //         enemy2.drawEnemy(enemy2);
-                //         break;
-                //     }
-                // }
-                // if (enemy2.Alive())
-                // {
-                //     if (abs(xBullet - enemy2.getX()) < 10)
-                //     {
-                //         LCD.Clear();
-                //         enemy2.setAlive(0);
-                //         kills++;
-                //         enemy2.setY(20);
-                //         enemy1.drawEnemy(enemy1);
-                //         enemy2.drawEnemy(enemy2);
-                //         break;
-                //     }
-                // }
-
-                // Code inspired by code found on Stack Overflow
-                // https://stackoverflow.com/questions/12702561/iterate-through-a-c-vector-using-a-for-loop
-                for (Enemy &enemy : enemies)
-                {
-                    if (enemy.Alive() && abs(xBullet - enemy.getX()) < 10)
-                    {
-                        enemy.setAlive(0);
-                        kills++;
-                        break;
-                    }
-                }
-
-                xBullet += 5;
-
-                // if (jumping == true)
-                // {
-                //     LCD.Clear();
-                //     // Change y coordinate
-                //     t += 0.1;
-                //     if (y_0 + v_i * t + 0.5 * g * t * t < y_0)
-                //     {
-                //         yPlayer = y_0 + v_i * t + 0.5 * g * t * t;
-                //     }
-                //     else
-                //     {
-                //         yPlayer = y_0;
-                //         if (right == true)
-                //         {
-                //             playerRight.Draw(xPlayer, yPlayer);
-                //         }
-                //         else
-                //         {
-                //             playerLeft.Draw(xPlayer, yPlayer);
-                //         }
-                //         LCD.Update();
-                //         yPlayer = y_0;
-                //         t = 0;
-                //         jumping = false;
-                //     }
-                // }
-
-                for (Enemy &enemy : enemies)
-                {
-                    LCD.Clear();
-                    enemy.move();
-                    if (enemy.Alive())
-                    {
-                        enemy.drawEnemy(enemy);
-                    }
-                }
-                playerRight.Draw(xPlayer, yPlayer);
-                LCD.DrawCircle(xBullet, yBullet, 2);
-                Sleep(10);
-            }
-            if (right == true)
-            {
-                playerRight.Draw(xPlayer, yPlayer);
-            }
-            else
-            {
-                playerLeft.Draw(xPlayer, yPlayer);
-            }
-        }
-        else
-        {
-            xBullet = xPlayer - 10;
-            while (xBullet > 0)
-            {
-                if (GetAsyncKeyState(0x44) & 0x8000)
-                {
-                    moveRight();
-                }
-                if (GetAsyncKeyState(0x41) & 0x8000)
-                {
-                    moveLeft();
-                }
-                // if ((GetAsyncKeyState(0x57)) & 0x8000)
-                // {
-                //     jumping = true;
-                // }
-                if (xBullet - 8 < 0)
-                {
-                    LCD.Clear();
-                    break;
-                }
-                // if (enemy1.Alive())
-                // {
-                //     if (abs(xBullet - enemy1.getX()) < 10)
-                //     {
-                //         LCD.Clear();
-                //         enemy1.setAlive(0);
-                //         kills++;
-                //         enemy1.setY(20);
-                //         enemy1.drawEnemy(enemy1);
-                //         enemy2.drawEnemy(enemy2);
-                //         break;
-                //     }
-                // }
-                // if (enemy2.Alive())
-                // {
-                //     if (abs(xBullet - enemy2.getX()) < 10)
-                //     {
-                //         LCD.Clear();
-                //         enemy2.setAlive(0);
-                //         kills++;
-                //         enemy2.setY(20);
-                //         enemy1.drawEnemy(enemy1);
-                //         enemy2.drawEnemy(enemy2);
-                //         break;
-                //     }
-                // }
-
-                for (Enemy &enemy : enemies)
-                {
-                    if (enemy.Alive() && abs(xBullet - enemy.getX()) < 10)
-                    {
-                        enemy.setAlive(0);
-                        kills++;
-                        break;
-                    }
-                }
-
-                xBullet -= 5;
-
-                // if (jumping == true)
-                // {
-                //     LCD.Clear();
-                //     // Change y coordinate
-                //     t += 0.1;
-                //     if (y_0 + v_i * t + 0.5 * g * t * t < y_0)
-                //     {
-                //         yPlayer = y_0 + v_i * t + 0.5 * g * t * t;
-                //     }
-                //     else
-                //     {
-                //         yPlayer = y_0;
-                //         if (right == true)
-                //         {
-                //             playerRight.Draw(xPlayer, yPlayer);
-                //         }
-                //         else
-                //         {
-                //             playerLeft.Draw(xPlayer, yPlayer);
-                //         }
-                //         LCD.Update();
-                //         yPlayer = y_0;
-                //         t = 0;
-                //         jumping = false;
-                //     }
-                // }
-                for (Enemy &enemy : enemies)
-                {
-                    LCD.Clear();
-                    enemy.move();
-                    if (enemy.Alive())
-                    {
-                        enemy.drawEnemy(enemy);
-                    }
-                }
-                playerLeft.Draw(xPlayer, yPlayer);
-                LCD.DrawCircle(xBullet, yBullet, 2);
-                Sleep(10);
-            }
-            if (right == true)
-            {
-                playerRight.Draw(xPlayer, yPlayer);
-            }
-            else
-            {
-                playerLeft.Draw(xPlayer, yPlayer);
-            }
-        }
-    }
-};
-
-// Create the blueprint for the button functions
-void GenerateNextMap();
-void Credits();
-void Instructions();
-void Statistics();
-void Quit();
-void spawnEnemy();
-
-void spawnEnemy()
-{
-    Enemy newEnemy;
-    int randomNum = rand() % 2;
-    if (randomNum == 0)
-    {
-        newEnemy.setX(20);
-        newEnemy.setY(100);
-        newEnemy.setRight(true);
-    }
-    else
-    {
-        newEnemy.setX(300);
-        newEnemy.setY(100);
-        newEnemy.setRight(false);
-    }
-    enemies.push_back(newEnemy);
-}
-
-void GenerateNextMap()
-{
-    LCD.SetBackgroundColor(BLACK);
-    LCD.Clear();
-    Player player;
-    float gameTime = 0;
-
-    while (true)
-    {
-        if (GetAsyncKeyState(0x44) & 0x8000)
-        {
-            player.moveRight();
-        }
-        if (GetAsyncKeyState(0x41) & 0x8000)
-        {
-            player.moveLeft();
-        }
-        // if ((GetAsyncKeyState(0x57)) & 0x8000)
-        // {
-        //     player.jump();
-        // }
-        if ((GetAsyncKeyState(0x11)) & 0x8000)
-        {
-            player.shoot();
-        }
-
-        gameTime += 10;
-        if (gameTime > spawnTime)
-        {
-            spawnEnemy();
-            gameTime = 0;
-            enemySpeed += 0.05;
-        }
-
-        for (Enemy &enemy : enemies)
-        {
-            enemy.move();
-            LCD.Clear();
-            if (enemy.Alive())
-            {
-                enemy.drawEnemy(enemy);
-            }
-            if (player.getRight())
-            {
-                player.playerRight.Draw(player.getX(), player.getY());
-            }
-            else
-            {
-                player.playerLeft.Draw(player.getX(), player.getY());
-            }
-        }
-
-        Sleep(10);
     }
 }
 
@@ -802,5 +297,338 @@ int main()
         LCD.Update();
         // Never end
     }
+
     return 0;
+}
+
+// This is where the fun begins
+
+class Bullet
+{
+private:
+    float x, y, r = 1;
+    unsigned int color = YELLOW;
+    bool right_check, visible = false;
+
+public:
+    void Create(float x1, float y1, bool right)
+    {
+        x = x1, y = y1;
+        right_check = right;
+        visible = true;
+    }
+    void Draw()
+    {
+        if (ScreenBoundsCheck(Collision()))
+        {
+            visible = false;
+        }
+        if (visible)
+        {
+            LCD.DrawCircle(x, y, r);
+            if (right_check)
+            {
+                x += 5;
+            }
+            else
+            {
+                x -= 5;
+            }
+        }
+    }
+    void Kill()
+    {
+        visible = false;
+    }
+    bool Available()
+    {
+        return !visible;
+    }
+    array<int, 4> Collision()
+    {
+        return {x - r, y - r, x + r, y + r};
+    }
+};
+
+class Player
+{
+private:
+    int health = 5;
+    float x, y, w, h, bullet_timer = 11;
+    float t = 0, v = -7;
+    bool right_check = true, jump_check = false, shoot_check = false, dead_check = false;
+    FEHImage player_right, player_left, player_dead;
+    Bullet b1;
+
+public:
+    Player()
+    {
+        x = 153;
+        y = 170;
+        w = 15;
+        h = 50;
+        player_left.Open("protoustros_01.png");
+        player_right.Open("protoustros_02.png");
+        player_right.Draw(x, y);
+    }
+    void moveRight()
+    {
+        right_check = true;
+        if (x + w + 2 <= LCD_WIDTH)
+        {
+            x += 2;
+        }
+    }
+    void moveLeft()
+    {
+        right_check = false;
+        if (x - 2 >= 0)
+        {
+            x -= 2;
+        }
+    }
+    void jump()
+    {
+        if (!jump_check)
+        {
+            jump_check = true;
+            t = 0.1;
+            y += v * t + 0.5 * GRAVITY * t * t;
+        }
+    }
+    void shoot()
+    {
+        if (bullet_timer > 50)
+        {
+            b1.Create(x, y + h / 3, right_check);
+            bullet_timer = 0;
+        }
+    }
+
+    array<int, 4> Collision()
+    {
+        return {x, y, x + w, y + h};
+    }
+    void Draw()
+    {
+        // draw shot bullet
+        b1.Draw();
+        bullet_timer += 1;
+        // calculate change in y coordinates
+        if (!BoundsCheckBox(Collision(), MAIN_PLATFORM))
+        {
+            if (ScreenBoundsCheck(Collision()))
+            {
+                Hit();
+                x = 153;
+                y = 160;
+            }
+            t += 0.1;
+            if (jump_check)
+            {
+                y += v * t + 0.5 * GRAVITY * t * t;
+            }
+            else
+            {
+                y += 0.5 * GRAVITY * t * t;
+            }
+        }
+        else
+        {
+            jump_check = false;
+            t = 0;
+            if (BoundsCheckBox(MAIN_PLATFORM, Collision()))
+            {
+                y = 170;
+            }
+        }
+        // check if player is dead
+        if (Death())
+        {
+            player_dead.Draw(x - h / 2, y + h - 15);
+        }
+        else
+        {
+            if (right_check)
+            {
+                player_right.Draw(x, y);
+            }
+            else
+            {
+                player_left.Draw(x, y);
+            }
+        }
+    }
+    void Hit()
+    {
+        health--;
+    }
+    bool Death()
+    {
+        if (health == 0)
+        {
+            dead_check = true;
+        }
+        return dead_check;
+    }
+
+    array<int, 4> BulletCollision()
+    {
+        return b1.Collision();
+    }
+
+    void BulletKill()
+    {
+        b1.Kill();
+    }
+
+    bool BulletCheck()
+    {
+        return !b1.Available();
+    }
+};
+
+class Enemy
+{
+protected:
+    float x, y, w, h, health;
+    float t = 0;
+    bool right_check, dead_check;
+    FEHImage enemy_right, enemy_left, enemy_dead;
+
+public:
+    array<int, 4> Collision()
+    {
+        return {x, y, x + w, y + h};
+    }
+    void Hit()
+    {
+        health--;
+    }
+
+    void Draw()
+    {
+        // check if player is dead
+        // calculate change in y coordinates
+        if (!BoundsCheckBox(Collision(), MAIN_PLATFORM))
+        {
+            t += 0.1;
+            y += 0.5 * GRAVITY * t * t;
+        }
+        if (!Dead())
+        {
+            t = 0;
+            y = 170;
+            if (right_check)
+            {
+                enemy_right.Draw(x++, y);
+            }
+            else
+            {
+                enemy_left.Draw(x--, y);
+            }
+        }
+    }
+    bool Dead()
+    {
+        if (health == 0 || (ScreenBoundsCheck(Collision())))
+        {
+            dead_check = true;
+        }
+        return dead_check;
+    }
+};
+
+// Enemy Type 1 with 1 health and 1 speed
+class Enemy1 : public Enemy
+{
+public:
+    Enemy1(bool right)
+    {
+        w = 15;
+        h = 50;
+        enemy_left.Open("protoustros_01.png");
+        enemy_right.Open("protoustros_02.png");
+        dead_check = false;
+        right_check = right;
+        health = 1;
+        y = 0;
+        if (right)
+        {
+            x = 40;
+        }
+        else
+        {
+            x = 280 - w;
+        }
+    }
+};
+
+vector<Enemy> enemies;
+
+void SpawnEnemy1()
+{
+    bool random_num = rand() % 2;
+    Enemy1 new_enemy(random_num);
+    enemies.push_back(new_enemy);
+}
+
+void Play()
+{
+    LCD.Clear();
+    Player player;
+    int kill_count = 0;
+    int time_0 = time(NULL);
+    bool second_over = true;
+    while (true)
+    {
+        LCD.Clear();
+        LCD.SetFontColor(WHITE);
+        LCD.DrawRectangle(40, 220, 240, 19);
+        LCD.FillRectangle(40, 220, 240, 19);
+        if (GetAsyncKeyState(0x41) & 0x8000)
+        {
+            player.moveLeft();
+        }
+        if (GetAsyncKeyState(0x44) & 0x8000)
+        {
+            player.moveRight();
+        }
+        if (GetAsyncKeyState(0x57) & 0x8000)
+        {
+            player.jump();
+        }
+        if (GetAsyncKeyState(0x11) & 0x8000)
+        {
+            player.shoot();
+        }
+        player.Draw();
+        if ((time(NULL) - time_0) % 7 == 0 && second_over)
+        {
+            SpawnEnemy1();
+            second_over = false;
+        }
+        if ((time(NULL) - time_0) % 7 == 1)
+        {
+            second_over = true;
+        }
+        for (int i = 0; i < enemies.size(); i++)
+        {
+            if (enemies[i].Dead())
+            {
+                enemies.erase(enemies.begin() + i--);
+            }
+        }
+        for (Enemy &enemy : enemies)
+        {
+            enemy.Draw();
+            if (BoundsCheckBox(player.BulletCollision(), enemy.Collision()) && player.BulletCheck())
+            {
+                enemy.Hit();
+                player.BulletKill();
+            }
+        }
+        Sleep(10);
+    }
+    // Random Enemy Generation push
 }
