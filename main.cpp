@@ -2,6 +2,7 @@
 #include "FEHUtility.h"
 #include "FEHImages.h"
 #include "Windows.h"
+#include "Windows.h"
 #include <array>
 #include <vector>
 #include <iostream>
@@ -579,6 +580,7 @@ void Play()
         if (player.Dead())
         {
             final_time = time(NULL) - time_0;
+            enemies.clear();
             break;
         }
 
