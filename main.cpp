@@ -1,13 +1,7 @@
-/**
- * @author Shreyash Purav
- * @date 11/17/24
- * Instructor: Clingan 12:40
- */
-
 #include "FEHLCD.h"
 #include "FEHUtility.h"
 #include "FEHImages.h"
-#include <Windows.h>
+#include "Windows.h"
 #include <array>
 #include <vector>
 #include <iostream>
@@ -16,29 +10,48 @@ using namespace std;
 
 #define CHAR_HEIGHT 17
 #define CHAR_WIDTH 12
-int map_num = 0;
+#define GRAVITY 4
 
 /*
     Buttons and Utility
 */
-
-bool BoundsCheck(int x, int y, array<int, 4> box)
+struct Box
 {
-    bool x_check = x >= box[0] && x <= box[2];
-    bool y_check = y >= box[1] && y <= box[3];
-    return x_check && y_check;
-}
+    int x1, y1, x2, y2; // left, top, right, bottom
+
+    Box(int x1_0, int y1_0, int x2_0, int y2_0)
+    {
+        x1 = x1_0, y1 = y1_0, x2 = x2_0, y2 = y2_0;
+    }
+
+    bool PointIntersection(int x, int y)
+    {
+        return x >= x1 && x <= x2 && y >= y1 && y <= y2;
+    }
+
+    bool BoxIntersection(Box box2)
+    {
+        return (x2 >= box2.x1) && (x1 <= box2.x2) && (y2 >= box2.y1) && (y1 <= box2.y2);
+    }
+
+    bool ScreenIntersection()
+    {
+        return x1 < 0 || x2 > LCD_WIDTH || y2 > LCD_HEIGHT;
+    }
+};
+
+Box main_platform(40, 220, 280, 239);
 
 class Button
 {
 private:
-    int x, y, width, height, text_length, x_t, y_t;
+    int x, y, w, h, text_length, x_t, y_t;
     unsigned int border_color = WHITE, fill_color = BLACK, text_color = WHITE;
     char text[30];
     void (*function)();
 
 public:
-    Button(int w = 1, int h = 1) : width(w), height(h) {}
+    Button(int w1 = 1, int h1 = 1) : w(w1), h(h1) {}
 
     void SetXCoord(int x1)
     {
@@ -52,12 +65,12 @@ public:
 
     void SetXProp(float x_prop)
     {
-        x = x_prop * LCD_WIDTH - width / 2;
+        x = x_prop * LCD_WIDTH - w / 2;
     }
 
     void SetYProp(float y_prop)
     {
-        y = y_prop * LCD_HEIGHT - height / 2;
+        y = y_prop * LCD_HEIGHT - h / 2;
     }
 
     void SetBorderColor(unsigned int color)
@@ -75,20 +88,20 @@ public:
         text_color = color;
     }
 
-    void SetText(const char *str)
+    void SetText(char str[])
     {
         text_length = strlen(str);
         strcpy(text, str);
     }
 
-    void SetWidth(int w)
+    void SetWidth(int w1)
     {
-        width = w;
+        w = w1;
     }
 
-    void SetHeight(int h)
+    void SetHeight(int h1)
     {
-        height = h;
+        h = h1;
     }
 
     void SetFunction(void funct())
@@ -99,25 +112,25 @@ public:
     void Create()
     {
         LCD.SetFontColor(fill_color);
-        LCD.FillRectangle(x, y, width, height);
+        LCD.FillRectangle(x, y, w, h);
         LCD.SetFontColor(border_color);
-        LCD.DrawRectangle(x, y, width, height);
-        x_t = x + (width - (text_length * CHAR_WIDTH)) / 2, y_t = y + (height - CHAR_HEIGHT) / 2;
+        LCD.DrawRectangle(x, y, w, h);
+        x_t = x + (w - (text_length * CHAR_WIDTH)) / 2, y_t = y + (h - CHAR_HEIGHT) / 2;
         LCD.SetFontColor(text_color);
         LCD.WriteAt(text, x_t, y_t);
     }
 
     void Check(float x_press, float y_press)
     {
-        array<int, 4> button = {x, y, x + width, y + height};
-        if (BoundsCheck(x_press, y_press, button))
+        Box button(x, y, x + w, y + h);
+        if (button.PointIntersection(x_press, y_press))
         {
             function();
         }
     }
 };
 
-void WriteCenter(const char *str, int y)
+void WriteCenter(char str[], int y)
 {
     int length = strlen(str) * CHAR_WIDTH;
     int x = (LCD_WIDTH / 2) - length / 2;
@@ -125,56 +138,7 @@ void WriteCenter(const char *str, int y)
 }
 
 // Blueprints
-void Menu(), GenerateNextMap(), Credits(), Instructions(), Statistics(), Quit();
-
-/*
-    SDP Menu Creation
-
-    Create a menu screen with 5 buttons the user can press. The options are
-    Play, "Statistics", "Instructions", "Credits", or Quit.
-    Each of the 3 info pages have a Back Button to return to Menu.
-*/
-void Menu()
-{
-    LCD.SetBackgroundColor(BLACK);
-    LCD.Clear();
-
-    int width, height = 25, y_diff = 10, y_start = 40;
-    float x_prop = 0.5;
-    const char *labels[5] = {"Play", "Credits", "Instructions", "Statistics", "Quit"};
-    void (*functions[5])() = {GenerateNextMap, Credits, Instructions, Statistics, Quit};
-
-    Button menu_buttons[5];
-
-    for (int b = 0; b < 5; b++)
-    {
-        width = (strlen(labels[b]) + 2) * CHAR_WIDTH;
-        menu_buttons[b].SetWidth(width);
-        menu_buttons[b].SetHeight(height);
-        menu_buttons[b].SetXProp(x_prop);
-        menu_buttons[b].SetYCoord(y_start + b * (height + y_diff));
-        menu_buttons[b].SetText(labels[b]);
-        menu_buttons[b].SetBorderColor(LIGHTGRAY);
-        menu_buttons[b].SetFillColor(MEDIUMBLUE);
-        menu_buttons[b].SetTextColor(LIGHTGRAY);
-        menu_buttons[b].SetFunction(functions[b]);
-        menu_buttons[b].Create();
-    }
-    while (true)
-    {
-        int x, y;
-        while (!LCD.Touch(&x, &y))
-        {
-        }
-        while (LCD.Touch(&x, &y))
-        {
-        }
-        for (int c = 0; c < 5; c++)
-        {
-            menu_buttons[c].Check(x, y);
-        }
-    }
-}
+void Menu(), Play(), Credits(), Instructions(), Statistics(), Quit();
 
 void BackButtonCheck()
 {
@@ -202,197 +166,471 @@ void BackButtonCheck()
     }
 }
 
-class Player
-{
-private:
-    float xPlayer, yPlayer, t, y_0, v_i, g;
-    bool right;
+/*
+    SDP Menu Creation
 
-public:
-    FEHImage playerLeft, playerRight;
-    Player()
-    {
-        xPlayer = 100;
-        yPlayer = 100;
-        t = 0;
-        v_i = -30;
-        g = 10;
-        right = true;
-        playerLeft.Open("protoustros_01.png");
-        playerRight.Open("protoustros_02.png");
-        playerRight.Draw(xPlayer, yPlayer);
-    }
-    void moveRight()
-    {
-        LCD.Clear();
-        xPlayer += 2;
-        playerRight.Draw(xPlayer, yPlayer);
-        right = true;
-    }
-    void moveLeft()
-    {
-        LCD.Clear();
-        xPlayer -= 2;
-        playerLeft.Draw(xPlayer, yPlayer);
-        right = false;
-    }
-    void jump()
-    {
-        jumping = true;
-        y_0 = yPlayer;
-        while (yPlayer <= y_0)
-        {
-            // Clear previous jumper
-            LCD.Clear();
-
-            // Change y coordinate
-            t += 0.1;
-            if (y_0 + v_i * t + 0.5 * g * t * t < y_0)
-            {
-                yPlayer = y_0 + v_i * t + 0.5 * g * t * t;
-            }
-            else
-            {
-                yPlayer = y_0;
-                if (right == true)
-                {
-                    playerRight.Draw(xPlayer, yPlayer);
-                }
-                else
-                {
-                    playerLeft.Draw(xPlayer, yPlayer);
-                }
-                break;
-            }
-            LCD.Clear();
-            if (right == true)
-            {
-                playerRight.Draw(xPlayer, yPlayer);
-            }
-            else
-            {
-                playerLeft.Draw(xPlayer, yPlayer);
-            }
-
-            if (GetAsyncKeyState(0x44) & 0x8000)
-            {
-                moveRight();
-            }
-            if (GetAsyncKeyState(0x41) & 0x8000)
-            {
-                moveLeft();
-            }
-            if ((GetAsyncKeyState(0x11)) & 0x8000)
-            {
-                shoot();
-            }
-
-            Sleep(10);
-        }
-        LCD.Update();
-        yPlayer = y_0;
-        t = 0;
-        jumping = false;
-    }
-    void shoot()
-    {
-        float xBullet, yBullet;
-        xBullet = xPlayer + 20;
-        yBullet = yPlayer + 20;
-        LCD.Clear();
-        LCD.SetFontColor(WHITE);
-        LCD.DrawCircle(xBullet, yBullet, 2);
-        while (xBullet < 319)
-        {
-            if (GetAsyncKeyState(0x44) & 0x8000)
-            {
-                moveRight();
-            }
-            if (GetAsyncKeyState(0x41) & 0x8000)
-            {
-                moveLeft();
-            }
-            if ((GetAsyncKeyState(0x57)) & 0x8000)
-            {
-                jumping = true;
-            }
-
-            if (xBullet + 10 > 319)
-            {
-                LCD.Clear();
-                break;
-            }
-            xBullet += 5;
-            if (jumping == true)
-            {
-                LCD.Clear();
-                // Change y coordinate
-                t += 0.1;
-                if (y_0 + v_i * t + 0.5 * g * t * t < y_0)
-                {
-                    yPlayer = y_0 + v_i * t + 0.5 * g * t * t;
-                }
-                else
-                {
-                    yPlayer = y_0;
-                    if (right == true)
-                    {
-                        playerRight.Draw(xPlayer, yPlayer);
-                    }
-                    else
-                    {
-                        playerLeft.Draw(xPlayer, yPlayer);
-                    }
-                    LCD.Update();
-                    yPlayer = y_0;
-                    t = 0;
-                    jumping = false;
-                }
-            }
-            LCD.Clear();
-            playerRight.Draw(xPlayer, yPlayer);
-            LCD.DrawCircle(xBullet, yBullet, 2);
-            Sleep(10);
-        }
-        playerRight.Draw(xPlayer, yPlayer);
-    }
-};
-
-// Create the blueprint for the button functions
-void GenerateNextMap();
-void Credits();
-void Instructions();
-void Statistics();
-void Quit();
-
-void GenerateNextMap()
+    Create a menu screen with 5 buttons the user can press. The options are
+    Play, "Statistics", "Instructions", "Credits", or Quit.
+    Each of the 3 info pages have a Back Button to return to Menu.
+*/
+void Menu()
 {
     LCD.SetBackgroundColor(BLACK);
     LCD.Clear();
-    Player player;
+
+    int w, h = 25, y_diff = 10, y_start = 40;
+    float x_prop = 0.5;
+    char labels[5][30] = {"Play", "Credits", "Instructions", "Statistics", "Quit"};
+    void (*functions[5])() = {Play, Credits, Instructions, Statistics, Quit};
+
+    Button menu_buttons[5];
+
+    for (int b = 0; b < 5; b++)
+    {
+        w = (strlen(labels[b]) + 2) * CHAR_WIDTH;
+        menu_buttons[b].SetWidth(w);
+        menu_buttons[b].SetHeight(h);
+        menu_buttons[b].SetXProp(x_prop);
+        menu_buttons[b].SetYCoord(y_start + b * (h + y_diff));
+        menu_buttons[b].SetText(labels[b]);
+        menu_buttons[b].SetBorderColor(LIGHTGRAY);
+        menu_buttons[b].SetFillColor(MEDIUMBLUE);
+        menu_buttons[b].SetTextColor(LIGHTGRAY);
+        menu_buttons[b].SetFunction(functions[b]);
+        menu_buttons[b].Create();
+    }
     while (true)
     {
-
-        if (GetAsyncKeyState(0x44) & 0x8000)
+        int x, y;
+        while (!LCD.Touch(&x, &y))
         {
-            player.moveRight();
         }
+        while (LCD.Touch(&x, &y))
+        {
+        }
+        for (int c = 0; c < 5; c++)
+        {
+            menu_buttons[c].Check(x, y);
+        }
+    }
+}
+
+// This is where the fun begins
+
+class Bullet
+{
+private:
+    float x, y, r = 1;
+    unsigned int color = YELLOW;
+    bool right_check, visible_check = false;
+
+public:
+    void Create(float x1, float y1, bool right)
+    {
+        x = x1, y = y1;
+        right_check = right;
+        visible_check = true;
+    }
+
+    Box CollisionBox()
+    {
+        return Box(x - r, y - r, x + r, y + r);
+    }
+
+    void Draw()
+    {
+        if (CollisionBox().ScreenIntersection())
+        {
+            visible_check = false;
+        }
+        if (visible_check)
+        {
+            LCD.SetFontColor(color);
+            LCD.DrawCircle(x, y, r);
+            if (right_check)
+            {
+                x += 5;
+            }
+            else
+            {
+                x -= 5;
+            }
+        }
+    }
+
+    void Kill()
+    {
+        visible_check = false;
+    }
+
+    bool Available()
+    {
+        return !visible_check;
+    }
+};
+
+class Player
+{
+private:
+    const int total_hit_points = 5;
+    int hit_points = total_hit_points;
+    float x, y, w, h;
+    float t = 0, v_jump = -7, bullet_timer = 11;
+    bool right_check = true, jump_check = false, shoot_check = false, dead_check = false;
+    FEHImage player_right, player_left, player_dead, player_hearts, player_hits;
+    Bullet b1;
+
+public:
+    Player()
+    {
+        x = 153, y = 170;
+        w = 15, h = 50;
+        player_left.Open("protoustros_01.png");
+        player_right.Open("protoustros_02.png");
+        player_hearts.Open("heart_full.png");
+        player_hits.Open("heart_empty.png");
+        player_right.Draw(x, y);
+    }
+
+    Box CollisionBox()
+    {
+        return Box(x, y, x + w, y + h);
+    }
+
+    void moveRight()
+    {
+        right_check = true;
+        x += 2;
+    }
+
+    void moveLeft()
+    {
+        right_check = false;
+        x -= 2;
+    }
+
+    void jump()
+    {
+        if (!jump_check)
+        {
+            jump_check = true;
+            t = 0.1;
+            y += v_jump * t + 0.5 * GRAVITY * t * t;
+        }
+    }
+
+    void shoot()
+    {
+        if (bullet_timer > 50)
+        {
+            b1.Create(x, y + h / 3, right_check);
+            bullet_timer = 0;
+        }
+    }
+
+    void Hit()
+    {
+        hit_points--;
+    }
+
+    bool Dead()
+    {
+        return hit_points == 0;
+    }
+
+    void Draw()
+    {
+        // draw shot bullet
+        b1.Draw();
+        bullet_timer++;
+        // calculate change in y coordinates
+        if (!CollisionBox().BoxIntersection(main_platform))
+        {
+            t += 0.1;
+            if (jump_check)
+            {
+                y += v_jump * t + 0.5 * GRAVITY * t * t;
+            }
+            else
+            {
+                y += 0.5 * GRAVITY * t * t;
+            }
+
+            if (CollisionBox().ScreenIntersection())
+            {
+                Hit();
+                x = 153;
+                y = 160;
+            }
+        }
+        else
+        {
+            jump_check = false;
+            t = 0;
+            y = 170;
+        }
+
+        // check if player is dead
+        if (hit_points != 0)
+        {
+            if (right_check)
+            {
+                player_right.Draw(x, y);
+            }
+            else
+            {
+                player_left.Draw(x, y);
+            }
+        }
+
+        // Draw health indicating hearts
+        LCD.SetFontColor(DARKSLATEGRAY);
+        LCD.DrawRectangle(1, 232, 318, 7);
+        LCD.FillRectangle(1, 232, 318, 7);
+        for (int h = 0; h < total_hit_points; h++)
+        {
+            if (h < hit_points)
+            {
+                player_hearts.Draw(7 * h + 1, 232);
+            }
+            else
+            {
+                player_hits.Draw(7 * h + 1, 232);
+            }
+        }
+    }
+
+    Box BulletCollisionBox()
+    {
+        return b1.CollisionBox();
+    }
+
+    void BulletKill()
+    {
+        b1.Kill();
+    }
+
+    bool BulletCheck()
+    {
+        return !b1.Available();
+    }
+};
+
+class Enemy
+{
+protected:
+    float x, y, w, h, health;
+    bool right_check, hit_check = false;
+    FEHImage enemy_right, enemy_left, enemy_dead;
+
+public:
+    Box CollisionBox()
+    {
+        return Box(x, y, x + w, y + h);
+    }
+
+    void Hit()
+    {
+        health--;
+    }
+
+    void PlayerHit()
+    {
+        hit_check = true;
+    }
+
+    bool CheckPlayerHit()
+    {
+        return hit_check;
+    }
+
+    bool Dead()
+    {
+        return (health == 0 || (CollisionBox().ScreenIntersection()));
+    }
+
+    virtual void Draw() = 0;
+};
+
+// Enemy Type 1 with 1 health and 1 speed
+class Enemy1 : public Enemy
+{
+private:
+    float t = 0;
+
+public:
+    Enemy1(bool right)
+    {
+        w = 15;
+        h = 50;
+        enemy_left.Open("protoustros_01.png");
+        enemy_right.Open("protoustros_02.png");
+        right_check = right;
+        health = 1;
+        y = 0 - h;
+        if (right)
+        {
+            x = 0;
+        }
+        else
+        {
+            x = 320 - w;
+        }
+    }
+    void Draw() override
+    {
+        if (!CollisionBox().BoxIntersection(main_platform))
+        {
+            t += 0.1;
+            y += 0.5 * GRAVITY * t * t;
+        }
+        else
+        {
+            t = 0;
+            y = 170;
+        }
+        if (!Dead())
+        {
+            if (right_check)
+            {
+                enemy_right.Draw(x++, y);
+            }
+            else
+            {
+                enemy_left.Draw(x--, y);
+            }
+        }
+    }
+};
+
+vector<Enemy *> enemies;
+
+void SpawnEnemy1()
+{
+    bool random_num = rand() % 2;
+    Enemy1 *new_enemy = new Enemy1(random_num);
+    enemies.push_back(new_enemy);
+}
+
+void Play()
+{
+    LCD.Clear();
+    Player player;
+    int kill_count = 0, final_time = 0;
+    int time_0 = time(NULL);
+    bool second_over = true;
+    while (true)
+    {
+        LCD.Clear();
+        LCD.SetFontColor(WHITE);
+        LCD.DrawRectangle(40, 220, 240, 19);
+        LCD.FillRectangle(40, 220, 240, 19);
         if (GetAsyncKeyState(0x41) & 0x8000)
         {
             player.moveLeft();
         }
-        if ((GetAsyncKeyState(0x57)) & 0x8000)
+        if (GetAsyncKeyState(0x44) & 0x8000)
+        {
+            player.moveRight();
+        }
+        if (GetAsyncKeyState(0x57) & 0x8000)
         {
             player.jump();
         }
-        if ((GetAsyncKeyState(0x11)) & 0x8000)
+        if (GetAsyncKeyState(0x11) & 0x8000)
         {
             player.shoot();
         }
+        player.Draw();
+        if ((time(NULL) - time_0) % 7 == 0 && second_over)
+        {
+            SpawnEnemy1();
+            second_over = false;
+        }
+        if ((time(NULL) - time_0) % 7 == 1)
+        {
+            second_over = true;
+        }
+
+        for (int i = 0; i < enemies.size(); i++)
+        {
+            if (enemies[i]->Dead())
+            {
+                enemies.erase(enemies.begin() + i--);
+            }
+        }
+
+        for (Enemy *enemy : enemies)
+        {
+            enemy->Draw();
+            if (enemy->CollisionBox().BoxIntersection(player.BulletCollisionBox()) && player.BulletCheck())
+            {
+                kill_count++;
+                enemy->Hit();
+                player.BulletKill();
+            }
+            if (enemy->CollisionBox().BoxIntersection(player.CollisionBox()) && !enemy->CheckPlayerHit())
+            {
+                enemy->PlayerHit();
+                player.Hit();
+            }
+        }
+
+        if (player.Dead())
+        {
+            final_time = time(NULL) - time_0;
+            break;
+        }
+
         Sleep(10);
     }
-    // float x, y;
-    // float x_trash, y_trash;
+
+    int score = kill_count * 7 + final_time;
+    int high_score, total_kill_count, best_time;
+
+    ifstream high_score_in;
+    high_score_in.open("statistics.txt");
+    high_score_in >> high_score;
+    high_score_in >> total_kill_count;
+    high_score_in >> best_time;
+    high_score_in.close();
+
+    if (score > high_score)
+    {
+        high_score = score;
+    }
+    if (final_time > best_time)
+    {
+        best_time = final_time;
+    }
+    total_kill_count += kill_count;
+
+    ofstream high_score_out;
+    high_score_out.open("high_score.txt");
+    high_score_out << high_score << endl;
+    high_score_out << total_kill_count << endl;
+    high_score_out << best_time;
+    high_score_out.close();
+
+    LCD.Clear();
+    LCD.SetFontColor(WHITE);
+
+    char score_text[30];
+    char high_score_text[30];
+    char kills_text[30];
+    char time_text[30];
+
+    sprintf(score_text, "Score: %i", score);
+    sprintf(high_score_text, "High Score: %i", high_score);
+    sprintf(kills_text, "Kills: %i", kill_count);
+    sprintf(time_text, "Time: %i", final_time);
+
+    WriteCenter(score_text, 20);
+    WriteCenter(high_score_text, 40);
+    WriteCenter(kills_text, 60);
+    WriteCenter(time_text, 80);
+
+    BackButtonCheck();
 }
 
 void Credits()
@@ -422,13 +660,12 @@ void Instructions()
     LCD.SetFontColor(WHITE);
     WriteCenter("INSTRUCTIONS", 10);
     WriteCenter("__________________________", 20);
-    WriteCenter("Use WASD to move and CTRL", 50);
-    WriteCenter("to shoot. Move through", 70);
-    WriteCenter("the levels without", 90);
-    WriteCenter("dying and reach the end", 110);
-    WriteCenter("to move onto the next", 130);
-    WriteCenter("level. Complete all ", 150);
-    WriteCenter("levels to beat the game.", 170);
+    WriteCenter("Use WAS to move and CTRL", 50);
+    WriteCenter("to shoot. Kill ", 70);
+    WriteCenter("enemies and survive", 90);
+    WriteCenter("as long as possible", 110);
+    WriteCenter("to get a high score.", 130);
+    WriteCenter("You have 5 hearts.", 150);
 
     // Create and check a back button to return to the main menu
     BackButtonCheck();
@@ -440,14 +677,26 @@ void Statistics()
       Reset the background color, clear the screen,
       then write out the statistics.
     */
+    int high_score, total_kill_count, best_time;
+
+    ifstream high_score_in;
+    high_score_in.open("statistics.txt");
+    high_score_in >> high_score >> total_kill_count >> best_time;
+    high_score_in.close();
+
+    char high_score_text[30], total_kill_count_text[30], best_time_text[30];
+    sprintf(high_score_text, "HIGH SCORE:  %i", high_score);
+    sprintf(total_kill_count_text, "TOTAL KILLS: %i", total_kill_count);
+    sprintf(best_time_text, "BEST TIME:   %i", best_time);
+
     LCD.SetBackgroundColor(BLACK);
     LCD.Clear();
     LCD.SetFontColor(WHITE);
     WriteCenter("STATS", 10);
     WriteCenter("__________________________", 20);
-    LCD.WriteAt("KILLS: 0", 50, 40);
-    LCD.WriteAt("LEVELS COMPLETED: 0", 50, 60);
-    LCD.WriteAt("GREAT ENEMIES FELL: 1", 50, 80);
+    LCD.WriteAt(high_score_text, 50, 40);
+    LCD.WriteAt(total_kill_count_text, 50, 60);
+    LCD.WriteAt(best_time_text, 50, 80);
 
     /*
       Create and check a back button to return to the main menu
@@ -475,111 +724,6 @@ int main()
         LCD.Update();
         // Never end
     }
+
     return 0;
-}
-
-// This is where the fun begins
-
-/*
-    Map Generation here!
-*/
-
-class Platform
-{
-private:
-    int x, y, width, height;
-    unsigned int color;
-
-public:
-    Platform(int x1, int y1, int w, int h, unsigned int color1) : x(x1), y(y1), width(w), height(h), color(color1)
-    {
-        Draw();
-    }
-
-    void Draw()
-    {
-        LCD.SetFontColor(color);
-        LCD.DrawRectangle(x, y, width, height);
-        LCD.FillRectangle(x, y, width, height);
-    }
-
-    array<int, 4> Collision()
-    {
-        array<int, 4> box = {x, y, x + width, y + height};
-        return box;
-    }
-};
-
-class Tile
-{
-private:
-    int num;
-    array<int, 4> connections;
-    vector<Platform> platforms;
-
-public:
-    Tile(int n) : num(n) {}
-
-    void AddPlatform(Platform platform)
-    {
-        platforms.push_back(platform);
-    }
-
-    void Draw()
-    {
-        for (int i = 0; i < platforms.size(); i++)
-        {
-            platforms[i].Draw();
-        }
-    }
-
-    bool CollisionCheck(int x, int y)
-    {
-        bool check = false;
-        for (int i = 0; i < platforms.size(); i++)
-        {
-            if (BoundsCheck(x, y, platforms[i].Collision()))
-            {
-                check = true;
-            }
-        }
-        return check;
-    }
-
-    int Num()
-    {
-        return num;
-    }
-
-    /*
-      0 = left, 1 = up, 2 = right, 3 = down
-    */
-    int NextTile(int direction)
-    {
-        return connections[direction];
-    }
-};
-
-class Map
-{
-private:
-    int num;
-    int current_tile = 0;
-    vector<Tile> tiles;
-
-public:
-    void AddTile(Tile tile)
-    {
-        tiles.push_back(tile);
-    }
-    void DrawNextTile()
-    {
-    }
-    // if sprite is
-};
-
-void GenerateNextMap()
-{
-    LCD.Clear();
-    BackButtonCheck();
 }
