@@ -276,21 +276,28 @@ private:
     const int total_hit_points = 5;
     int hit_points = total_hit_points;
     float x, y, w, h;
-    float t = 0, v_jump = -7, bullet_timer = 11;
+    float t = 0, v_jump = -7, bullet_timer = 40;
     bool right_check = true, jump_check = false, shoot_check = false, dead_check = false;
-    FEHImage player_right, player_left, player_dead, player_hearts, player_hits;
+    bool step_check = false, step_num = 0;
+    FEHImage player_left_0, player_left_1, player_left_2;
+    FEHImage player_right_0, player_right_1, player_right_2;
+    FEHImage player_hearts, player_hits;
     Bullet b1;
 
 public:
     Player()
     {
-        x = 153, y = 170;
-        w = 15, h = 50;
-        player_left.Open("protoustros_01.png");
-        player_right.Open("protoustros_02.png");
+        w = 15, h = 55;
+        x = 153, y = 220 - h;
+        player_left_0.Open("astro_left_0.png");
+        player_left_1.Open("astro_left_1.png");
+        player_left_2.Open("astro_left_2.png");
+        player_right_0.Open("astro_right_0.png");
+        player_right_1.Open("astro_right_1.png");
+        player_right_2.Open("astro_right_2.png");
+
         player_hearts.Open("heart_full.png");
         player_hits.Open("heart_empty.png");
-        player_right.Draw(x, y);
     }
 
     Box CollisionBox()
@@ -301,12 +308,14 @@ public:
     void moveRight()
     {
         right_check = true;
+        step_check = true;
         x += 2;
     }
 
     void moveLeft()
     {
         right_check = false;
+        step_check = true;
         x -= 2;
     }
 
@@ -324,7 +333,16 @@ public:
     {
         if (bullet_timer > 50)
         {
-            b1.Create(x, y + h / 3, right_check);
+            if (right_check)
+            {
+
+                b1.Create(x + w, y + 28, true);
+            }
+            else
+            {
+
+                b1.Create(x, y + 28, false);
+            }
             bullet_timer = 0;
         }
     }
@@ -361,14 +379,14 @@ public:
             {
                 Hit();
                 x = 153;
-                y = 160;
+                y = 220 - h - 10;
             }
         }
         else
         {
             jump_check = false;
             t = 0;
-            y = 170;
+            y = 220 - h;
         }
 
         // check if player is dead
@@ -376,11 +394,45 @@ public:
         {
             if (right_check)
             {
-                player_right.Draw(x, y);
+                if (step_check)
+                {
+                    step_check = false;
+                    if (step_num)
+                    {
+                        step_num = false;
+                        player_right_1.Draw(x, y);
+                    }
+                    else
+                    {
+                        step_num = true;
+                        player_right_2.Draw(x, y);
+                    }
+                }
+                else
+                {
+                    player_right_0.Draw(x, y);
+                }
             }
             else
             {
-                player_left.Draw(x, y);
+                if (step_check)
+                {
+                    step_check = false;
+                    if (step_num)
+                    {
+                        step_num = false;
+                        player_left_1.Draw(x, y);
+                    }
+                    else
+                    {
+                        step_num = true;
+                        player_left_2.Draw(x, y);
+                    }
+                }
+                else
+                {
+                    player_left_0.Draw(x, y);
+                }
             }
         }
 
@@ -422,7 +474,7 @@ class Enemy
 protected:
     float x, y, w, h, health;
     bool right_check, hit_check = false;
-    FEHImage enemy_right, enemy_left, enemy_dead;
+    FEHImage enemy_left_1, enemy_left_2, enemy_right_1, enemy_right_2, enemy_dead;
 
 public:
     Box CollisionBox()
@@ -458,24 +510,28 @@ class Enemy1 : public Enemy
 {
 private:
     float t = 0;
+    int t_frames = 0;
+    bool frames_check = false;
 
 public:
     Enemy1(bool right)
     {
-        w = 15;
-        h = 50;
-        enemy_left.Open("protoustros_01.png");
-        enemy_right.Open("protoustros_02.png");
+        w = 20;
+        h = 40;
+        enemy_left_1.Open("xenos_left_1.png");
+        enemy_left_2.Open("xenos_left_2.png");
+        enemy_right_1.Open("xenos_right_1.png");
+        enemy_right_2.Open("xenos_right_2.png");
         right_check = right;
         health = 1;
         y = 0 - h;
         if (right)
         {
-            x = 0;
+            x = 15;
         }
         else
         {
-            x = 320 - w;
+            x = 320 - w - 15;
         }
     }
     void Draw() override
@@ -488,18 +544,37 @@ public:
         else
         {
             t = 0;
-            y = 170;
+            y = 220 - h;
         }
         if (!Dead())
         {
+
+            frames_check = t_frames / 10 != 0;
             if (right_check)
             {
-                enemy_right.Draw(x++, y);
+                if (frames_check)
+                {
+                    enemy_right_1.Draw(x, y);
+                }
+                else
+                {
+                    enemy_right_2.Draw(x, y);
+                }
+                x += 0.25;
             }
             else
             {
-                enemy_left.Draw(x--, y);
+                if (frames_check)
+                {
+                    enemy_left_1.Draw(x, y);
+                }
+                else
+                {
+                    enemy_left_2.Draw(x, y);
+                }
+                x -= 0.25;
             }
+            t_frames = (t_frames + 1) % 20;
         }
     }
 };
@@ -608,7 +683,7 @@ void Play()
     total_kill_count += kill_count;
 
     ofstream high_score_out;
-    high_score_out.open("high_score.txt");
+    high_score_out.open("statistics.txt");
     high_score_out << high_score << endl;
     high_score_out << total_kill_count << endl;
     high_score_out << best_time;
