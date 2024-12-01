@@ -589,7 +589,7 @@ public:
             y = 220 - h;
         }
 
-        if (Dead)
+        if (!Death())
         {
             frames_check = t_frames / frames_speed != 0;
             if (right_check)
@@ -633,6 +633,12 @@ public:
         enemy_left_2.Open("xenos_left_2.png");
         enemy_right_1.Open("xenos_right_1.png");
         enemy_right_2.Open("xenos_right_2.png");
+        enemy_dead_right_1.Open("xenos_dead_right_1.png");
+        enemy_dead_left_1.Open("xenos_dead_left_1.png");
+        enemy_dead_right_2.Open("xenos_dead_right_2.png");
+        enemy_dead_left_2.Open("xenos_dead_left_2.png");
+        enemy_dead_right_3.Open("xenos_dead_right_3.png");
+        enemy_dead_left_3.Open("xenos_dead_left_3.png");
         right_check = right;
         health = 1;
         speed = 0.4;
@@ -657,10 +663,16 @@ public:
     {
         w = 20;
         h = 40;
-        enemy_left_1.Open("xenos_left_1.png");
-        enemy_left_2.Open("xenos_left_2.png");
-        enemy_right_1.Open("xenos_right_1.png");
-        enemy_right_2.Open("xenos_right_2.png");
+        enemy_left_1.Open("xenos_left_armored_1.png");
+        enemy_left_2.Open("xenos_left_armored_2.png");
+        enemy_right_1.Open("xenos_right_armored_1.png");
+        enemy_right_2.Open("xenos_right_armored_2.png");
+        enemy_dead_right_1.Open("xenos_dead_right_1.png");
+        enemy_dead_left_1.Open("xenos_dead_left_1.png");
+        enemy_dead_right_2.Open("xenos_dead_right_2.png");
+        enemy_dead_left_2.Open("xenos_dead_left_2.png");
+        enemy_dead_right_3.Open("xenos_dead_right_3.png");
+        enemy_dead_left_3.Open("xenos_dead_left_3.png");
         right_check = right;
         health = 3;
         speed = 0.2;
@@ -685,10 +697,16 @@ public:
     {
         w = 20;
         h = 40;
-        enemy_left_1.Open("xenos_left_1.png");
-        enemy_left_2.Open("xenos_left_2.png");
-        enemy_right_1.Open("xenos_right_1.png");
-        enemy_right_2.Open("xenos_right_2.png");
+        enemy_left_1.Open("xenos_left_fast_1.png");
+        enemy_left_2.Open("xenos_left_fast_2.png");
+        enemy_right_1.Open("xenos_right_fast_1.png");
+        enemy_right_2.Open("xenos_right_fast_2.png");
+        enemy_dead_right_1.Open("xenos_dead_right_1.png");
+        enemy_dead_left_1.Open("xenos_dead_left_1.png");
+        enemy_dead_right_2.Open("xenos_dead_right_2.png");
+        enemy_dead_left_2.Open("xenos_dead_left_2.png");
+        enemy_dead_right_3.Open("xenos_dead_right_3.png");
+        enemy_dead_left_3.Open("xenos_dead_left_3.png");
         right_check = right;
         health = 1;
         speed = 1;
