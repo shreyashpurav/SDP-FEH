@@ -472,9 +472,12 @@ public:
 class Enemy
 {
 protected:
-    float x, y, w, h, health;
-    bool right_check, hit_check = false;
-    FEHImage enemy_left_1, enemy_left_2, enemy_right_1, enemy_right_2, enemy_dead;
+    int dead_counter = 0, dead_timer = 0, t_frames = 0, frames_speed;
+    float x, y, w, h, health, speed, t = 0;
+    bool right_check, hit_check = false, frames_check = false;
+    FEHImage enemy_left_1, enemy_left_2, enemy_right_1, enemy_right_2;
+    FEHImage enemy_dead_left_1, enemy_dead_left_2, enemy_dead_left_3;
+    FEHImage enemy_dead_right_1, enemy_dead_right_2, enemy_dead_right_3;
 
 public:
     Box CollisionBox()
@@ -499,42 +502,81 @@ public:
 
     bool Dead()
     {
-        return (health == 0 || (CollisionBox().ScreenIntersection()));
+        return dead_counter == 3;
     }
 
-    virtual void Draw() = 0;
-};
-
-// Enemy Type 1 with 1 health and 1 speed
-class Enemy1 : public Enemy
-{
-private:
-    float t = 0;
-    int t_frames = 0;
-    bool frames_check = false;
-
-public:
-    Enemy1(bool right)
+    bool Death()
     {
-        w = 20;
-        h = 40;
-        enemy_left_1.Open("xenos_left_1.png");
-        enemy_left_2.Open("xenos_left_2.png");
-        enemy_right_1.Open("xenos_right_1.png");
-        enemy_right_2.Open("xenos_right_2.png");
-        right_check = right;
-        health = 1;
-        y = 0 - h;
-        if (right)
+        bool death_check = true;
+        if (CollisionBox().ScreenIntersection())
         {
-            x = 15;
+            dead_counter = 3;
+        }
+        else if (health == 0)
+        {
+            if (dead_counter < 3)
+            {
+                if (dead_timer == 0)
+                {
+                    dead_counter++;
+                    if (dead_counter == 1)
+                    {
+                        if (right_check)
+                        {
+                            enemy_dead_right_1.Draw(x, y);
+                        }
+                        else
+                        {
+                            enemy_dead_left_1.Draw(x, y);
+                        }
+                    }
+                    else if (dead_counter == 2)
+                    {
+                        if (right_check)
+                        {
+                            enemy_dead_right_2.Draw(x, y);
+                        }
+                        else
+                        {
+                            enemy_dead_left_2.Draw(x, y);
+                        }
+                    }
+                    else if (dead_counter == 3)
+                    {
+                        if (right_check)
+                        {
+                            enemy_dead_right_3.Draw(x, y);
+                        }
+                        else
+                        {
+                            enemy_dead_left_3.Draw(x, y);
+                        }
+                    }
+                }
+                dead_timer = (dead_timer + 1) % 10;
+            }
+            if (dead_counter == 3)
+            {
+                enemy_right_1.Close();
+                enemy_right_2.Close();
+                enemy_left_1.Close();
+                enemy_left_2.Close();
+                enemy_dead_right_1.Close();
+                enemy_dead_right_2.Close();
+                enemy_dead_right_3.Close();
+                enemy_dead_left_1.Close();
+                enemy_dead_left_2.Close();
+                enemy_dead_left_3.Close();
+            }
         }
         else
         {
-            x = 320 - w - 15;
+            death_check = false;
         }
+        return death_check;
     }
-    void Draw() override
+
+    void Draw()
     {
         if (!CollisionBox().BoxIntersection(main_platform))
         {
@@ -546,10 +588,10 @@ public:
             t = 0;
             y = 220 - h;
         }
-        if (!Dead())
-        {
 
-            frames_check = t_frames / 10 != 0;
+        if (Dead)
+        {
+            frames_check = t_frames / frames_speed != 0;
             if (right_check)
             {
                 if (frames_check)
@@ -560,7 +602,7 @@ public:
                 {
                     enemy_right_2.Draw(x, y);
                 }
-                x += 0.25;
+                x += speed;
             }
             else
             {
@@ -572,19 +614,117 @@ public:
                 {
                     enemy_left_2.Draw(x, y);
                 }
-                x -= 0.25;
+                x -= speed;
             }
-            t_frames = (t_frames + 1) % 20;
+            t_frames = (t_frames + 1) % (frames_speed * 2);
+        }
+    }
+};
+
+// Regular enemy with 1 health and medium speed
+class EnemyRegular : public Enemy
+{
+public:
+    EnemyRegular(bool right)
+    {
+        w = 20;
+        h = 40;
+        enemy_left_1.Open("xenos_left_1.png");
+        enemy_left_2.Open("xenos_left_2.png");
+        enemy_right_1.Open("xenos_right_1.png");
+        enemy_right_2.Open("xenos_right_2.png");
+        right_check = right;
+        health = 1;
+        speed = 0.4;
+        frames_speed = 10;
+        y = 0 - h;
+        if (right)
+        {
+            x = 15;
+        }
+        else
+        {
+            x = 320 - w - 15;
+        }
+    }
+};
+
+// Armored enemy with 3 health and slow speed
+class EnemyArmored : public Enemy
+{
+public:
+    EnemyArmored(bool right)
+    {
+        w = 20;
+        h = 40;
+        enemy_left_1.Open("xenos_left_1.png");
+        enemy_left_2.Open("xenos_left_2.png");
+        enemy_right_1.Open("xenos_right_1.png");
+        enemy_right_2.Open("xenos_right_2.png");
+        right_check = right;
+        health = 3;
+        speed = 0.2;
+        frames_speed = 10;
+        y = 0 - h;
+        if (right)
+        {
+            x = 15;
+        }
+        else
+        {
+            x = 320 - w - 15;
+        }
+    }
+};
+
+// Fast enemy with 1 health and fast speed
+class EnemyFast : public Enemy
+{
+public:
+    EnemyFast(bool right)
+    {
+        w = 20;
+        h = 40;
+        enemy_left_1.Open("xenos_left_1.png");
+        enemy_left_2.Open("xenos_left_2.png");
+        enemy_right_1.Open("xenos_right_1.png");
+        enemy_right_2.Open("xenos_right_2.png");
+        right_check = right;
+        health = 1;
+        speed = 1;
+        frames_speed = 5;
+        y = 0 - h;
+        if (right)
+        {
+            x = 15;
+        }
+        else
+        {
+            x = 320 - w - 15;
         }
     }
 };
 
 vector<Enemy *> enemies;
 
-void SpawnEnemy1()
+void SpawnEnemyRegular()
 {
     bool random_num = rand() % 2;
-    Enemy1 *new_enemy = new Enemy1(random_num);
+    EnemyRegular *new_enemy = new EnemyRegular(random_num);
+    enemies.push_back(new_enemy);
+}
+
+void SpawnEnemyArmored()
+{
+    bool random_num = rand() % 2;
+    EnemyArmored *new_enemy = new EnemyArmored(random_num);
+    enemies.push_back(new_enemy);
+}
+
+void SpawnEnemyFast()
+{
+    bool random_num = rand() % 2;
+    EnemyFast *new_enemy = new EnemyFast(random_num);
     enemies.push_back(new_enemy);
 }
 
@@ -593,10 +733,13 @@ void Play()
     LCD.Clear();
     Player player;
     int kill_count = 0, final_time = 0;
-    int time_0 = time(NULL);
-    bool second_over = true;
+    int time_0 = time(NULL), time_c;
+    bool second_over_regular = true;
+    bool second_over_armored = true;
+    bool second_over_fast = true;
     while (true)
     {
+        time_c = time(NULL) - time_0;
         LCD.Clear();
         LCD.SetFontColor(WHITE);
         LCD.DrawRectangle(40, 220, 240, 19);
@@ -618,14 +761,35 @@ void Play()
             player.shoot();
         }
         player.Draw();
-        if ((time(NULL) - time_0) % 7 == 0 && second_over)
+
+        if (time_c % 7 == 0 && second_over_regular)
         {
-            SpawnEnemy1();
-            second_over = false;
+            SpawnEnemyRegular();
+            second_over_regular = false;
         }
-        if ((time(NULL) - time_0) % 7 == 1)
+        if (time_c % 7 == 1)
         {
-            second_over = true;
+            second_over_regular = true;
+        }
+
+        if (time_c > 35 && time_c % 13 == 0 && second_over_armored)
+        {
+            SpawnEnemyArmored();
+            second_over_armored = false;
+        }
+        if (time_c % 13 == 1)
+        {
+            second_over_armored = true;
+        }
+
+        if (time_c > 70 && time_c % 9 == 0 && second_over_fast)
+        {
+            SpawnEnemyFast();
+            second_over_fast = false;
+        }
+        if (time_c % 9 == 1)
+        {
+            second_over_fast = true;
         }
 
         for (int i = 0; i < enemies.size(); i++)
