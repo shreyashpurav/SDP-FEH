@@ -273,14 +273,14 @@ public:
 class Player
 {
 private:
-    const int total_hit_points = 5;
-    int hit_points = total_hit_points;
+    const int total_health = 5;
+    int health = total_health;
     float x, y, w, h;
-    float t = 0, v_jump = -7, bullet_timer = 40;
-    bool right_check = true, jump_check = false, shoot_check = false, dead_check = false;
+    float t = 0, v_jump = -7, bullet_timer = 20, hit_timer = 0;
+    bool right_check = true, jump_check = false, shoot_check = false, dead_check = false, hit_check = false;
     bool step_check = false, step_num = 0;
-    FEHImage player_left_0, player_left_1, player_left_2;
-    FEHImage player_right_0, player_right_1, player_right_2;
+    FEHImage player_left_0, player_left_1, player_left_2, player_left_hit;
+    FEHImage player_right_0, player_right_1, player_right_2, player_right_hit;
     FEHImage player_hearts, player_hits;
     Bullet b1;
 
@@ -292,9 +292,11 @@ public:
         player_left_0.Open("astro_left_0.png");
         player_left_1.Open("astro_left_1.png");
         player_left_2.Open("astro_left_2.png");
+        player_left_hit.Open("astro_left_hit.png");
         player_right_0.Open("astro_right_0.png");
         player_right_1.Open("astro_right_1.png");
         player_right_2.Open("astro_right_2.png");
+        player_right_hit.Open("astro_right_hit.png");
 
         player_hearts.Open("heart_full.png");
         player_hits.Open("heart_empty.png");
@@ -331,7 +333,7 @@ public:
 
     void shoot()
     {
-        if (bullet_timer > 50)
+        if (bullet_timer > 30)
         {
             if (right_check)
             {
@@ -349,12 +351,13 @@ public:
 
     void Hit()
     {
-        hit_points--;
+        health--;
+        hit_check = true;
     }
 
     bool Dead()
     {
-        return hit_points == 0;
+        return health == 0;
     }
 
     void Draw()
@@ -390,48 +393,66 @@ public:
         }
 
         // check if player is dead
-        if (hit_points != 0)
+        if (health != 0)
         {
             if (right_check)
             {
-                if (step_check)
+                if (hit_check && hit_timer < 10)
                 {
-                    step_check = false;
-                    if (step_num)
-                    {
-                        step_num = false;
-                        player_right_1.Draw(x, y);
-                    }
-                    else
-                    {
-                        step_num = true;
-                        player_right_2.Draw(x, y);
-                    }
+                    hit_timer++;
+                    player_right_hit.Draw(x, y);
                 }
                 else
                 {
-                    player_right_0.Draw(x, y);
+                    hit_check = false;
+                    if (step_check)
+                    {
+                        step_check = false;
+                        if (step_num)
+                        {
+                            step_num = false;
+                            player_right_1.Draw(x, y);
+                        }
+                        else
+                        {
+                            step_num = true;
+                            player_right_2.Draw(x, y);
+                        }
+                    }
+                    else
+                    {
+                        player_right_0.Draw(x, y);
+                    }
                 }
             }
             else
             {
-                if (step_check)
+                if (hit_check && hit_timer < 10)
                 {
-                    step_check = false;
-                    if (step_num)
-                    {
-                        step_num = false;
-                        player_left_1.Draw(x, y);
-                    }
-                    else
-                    {
-                        step_num = true;
-                        player_left_2.Draw(x, y);
-                    }
+                    hit_timer++;
+                    player_left_hit.Draw(x, y);
                 }
                 else
                 {
-                    player_left_0.Draw(x, y);
+                    hit_check = false;
+                    if (step_check)
+                    {
+                        step_check = false;
+                        if (step_num)
+                        {
+                            step_num = false;
+                            player_left_1.Draw(x, y);
+                        }
+                        else
+                        {
+                            step_num = true;
+                            player_left_2.Draw(x, y);
+                        }
+                    }
+                    else
+                    {
+                        player_left_0.Draw(x, y);
+                    }
                 }
             }
         }
@@ -440,9 +461,9 @@ public:
         LCD.SetFontColor(DARKSLATEGRAY);
         LCD.DrawRectangle(1, 232, 318, 7);
         LCD.FillRectangle(1, 232, 318, 7);
-        for (int h = 0; h < total_hit_points; h++)
+        for (int h = 0; h < total_health; h++)
         {
-            if (h < hit_points)
+            if (h < health)
             {
                 player_hearts.Draw(7 * h + 1, 232);
             }
@@ -755,6 +776,7 @@ void Play()
     bool second_over_regular = true;
     bool second_over_armored = true;
     bool second_over_fast = true;
+    bool second_over_regular_2 = true;
     while (true)
     {
         time_c = time(NULL) - time_0;
@@ -808,6 +830,16 @@ void Play()
         if (time_c % 9 == 1)
         {
             second_over_fast = true;
+        }
+
+        if (time_c > 150 && time_c % 5 == 0 && second_over_regular_2)
+        {
+            SpawnEnemyFast();
+            second_over_regular_2 = false;
+        }
+        if (time_c % 5 == 1)
+        {
+            second_over_regular_2 = true;
         }
 
         for (int i = 0; i < enemies.size(); i++)
