@@ -33,13 +33,13 @@ struct Box
         x1 = x1_0, y1 = y1_0, x2 = x2_0, y2 = y2_0;
     }
 
-    // Checks if a point falls within the box, if it does true is returned
+    // Checks if the point x, y falls within the box, if it does true is returned
     bool PointIntersection(int x, int y)
     {
         return x >= x1 && x <= x2 && y >= y1 && y <= y2;
     }
 
-    // Checks if two boxes collide, if they do, true is returned
+    // Takes in the object box2, checks if two boxes collide, if they do, true is returned
     bool BoxIntersection(Box box2)
     {
         return (x2 >= box2.x1) && (x1 <= box2.x2) && (y2 >= box2.y1) && (y1 <= box2.y2);
@@ -75,45 +75,45 @@ public:
     // Constructor the button class and sets the values of width and height to 1
     Button(int w1 = 1, int h1 = 1) : w(w1), h(h1) {}
 
-    // Sets the x coordinate to the value passed into the function
+    // Takes in an x value and sets x coordinate to the value passed into the function
     void SetXCoord(int x1)
     {
         x = x1;
     }
 
-    // Sets the y coordinate to the value passed into the function
+    // Takes in an x value and sets x coordinate to the value passed into the function
     void SetYCoord(int y1)
     {
         y = y1;
     }
 
-    // Sets the x coordinate based on the proportion
+    // Takes in an x proportion and sets x prop to the value passed into the function
     void SetXProp(float x_prop)
     {
         // Takes the proportion (values 0-1) and multiplies it by LCD width then subtracts the width of the button / 2
         x = x_prop * LCD_WIDTH - w / 2;
     }
 
-    // Sets the y coordinate based on the proportion
+    // Takes in a y proportion and sets y prop to the value passed into the function
     void SetYProp(float y_prop)
     {
         // Takes the proportion (values 0-1) and multiplies it by LCD width then subtracts the height of the button / 2
         y = y_prop * LCD_HEIGHT - h / 2;
     }
 
-    // Sets border color to value passed into function
+    // Sets border color to color value passed into function
     void SetBorderColor(unsigned int color)
     {
         border_color = color;
     }
 
-    // Sets fill color to value passed into function
+    // Sets fill color to color value passed into function
     void SetFillColor(unsigned int color)
     {
         fill_color = color;
     }
 
-    // Sets text color to value passed into function
+    // Sets text color to color value passed into function
     void SetTextColor(unsigned int color)
     {
         text_color = color;
@@ -126,19 +126,19 @@ public:
         strcpy(text, str);
     }
 
-    // Sets the width of the button
+    // Sets the width of the button to the width entered into the function
     void SetWidth(int w1)
     {
         w = w1;
     }
 
-    // Sets the height of the button
+    // Sets the height of the button to the height entered into the function
     void SetHeight(int h1)
     {
         h = h1;
     }
 
-    // Tells the button what its function is. When the button is pressed, this function will be called
+    // Tells the button what its function is. When the button is pressed, the function taken in will be called
     void SetFunction(void funct())
     {
         function = funct;
@@ -164,7 +164,7 @@ public:
     {
         // Creates a button object at the coordinates of the button the function is checking
         Box button(x, y, x + w, y + h);
-        // Checks to see if the click falls inside the button being checked
+        // Takes in x and y coordinates of click and checks to see if the click falls inside the button being checked
         if (button.PointIntersection(x_press, y_press))
         {
             // If the click was inside the button, the function for the button being checked is called
@@ -173,7 +173,7 @@ public:
     }
 };
 
-// Writes text in the center of the screen at height y (Shreyash)
+// Writes char array str[] in the center of the screen at height y (Shreyash)
 void WriteCenter(char str[], int y)
 {
     // Calculates how wide the text will be on the screen
