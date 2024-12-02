@@ -1243,7 +1243,7 @@ void Instructions()
     LCD.SetFontColor(WHITE);
     WriteCenter("INSTRUCTIONS", 10);
     WriteCenter("__________________________", 20);
-    WriteCenter("Use W A S or arrow keys to", 50);
+    WriteCenter("Use W A D or arrow keys to", 50);
     WriteCenter("move and CTRL to shoot.", 70);
     WriteCenter("Kill enemies and survive", 90);
     WriteCenter("as long as possible to get", 110);
