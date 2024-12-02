@@ -630,42 +630,81 @@ public:
 };
 
 // Shreyash
+/*
+  Enemy Class is a parent class that contains all the common behavior for all enemy types.
+  Contains functions CollisionBox(), Hit(), PlayerHit(), CheckPlayerHit(), Dead(), Death(),
+  and Draw().
+*/
 class Enemy
 {
+// Uses protected to ensure that extending classes are able to access variables
 protected:
+    // dead_counter tracks which picture in the 3-picture death animation to show
+    // dead_timer spaces the death animation transitions out to make the animation human visible
+    // t_frames spaces the moving animation out
+    // frames_speed controls how long the moving animations last
     int dead_counter = 0, dead_timer = 0, t_frames = 0, frames_speed;
+    // x, y store the coordinates of the top-left corner of the sprite
+    // t is used to control the gravity effects on the sprite
     float x, y, w, h, health, speed, t = 0;
+    // right_check stores the direction the sprite faces: true = right, false = left
+    // hit_check stores whether the enemy has hit the player or not (can only hit once)
+    // frames_check uses t_frames and frames_speed to calculate which image to display for motion
     bool right_check, hit_check = false, frames_check = false;
+    // Moving enemy images
     FEHImage enemy_left_1, enemy_left_2, enemy_right_1, enemy_right_2;
+    // Death animation images
     FEHImage enemy_dead_left_1, enemy_dead_left_2, enemy_dead_left_3;
     FEHImage enemy_dead_right_1, enemy_dead_right_2, enemy_dead_right_3;
 
 public:
+    /*
+      Returns an instance of the Box struct, containing the bounding box of the enemy.
+    */
     Box CollisionBox()
     {
         return Box(x, y, x + w, y + h);
     }
 
+    /*
+      Decrements the health of the enemy. (returns nothing)
+    */
     void Hit()
     {
         health--;
     }
 
+    /*
+      Sets hit_check to true, i.e., the enemy has hit the player. (returns nothing)
+    */
     void PlayerHit()
     {
         hit_check = true;
     }
 
+    /*
+      Returns whether or not the enemy has hit the player.
+    */
     bool CheckPlayerHit()
     {
         return hit_check;
     }
 
+    /*
+      Returns whether or not the Death Animation is complete.
+    */
     bool Dead()
     {
         return dead_counter == 3;
     }
 
+    /*
+      If the enemy has fallen off the platform, skips the death animation.
+      If enemy has 0 health left (or less), plays the death animation,
+      closing all images upon completion.
+      Else if neither is true, enemy is not dead, so death_check is set to false.
+      Returns whether or not enemy is dead via death_check.
+    */
     bool Death()
     {
         bool death_check = true;
@@ -737,8 +776,13 @@ public:
         return death_check;
     }
 
+    /*
+      Draws the enemy and updates coordinates according to motion logic. (returns nothing)
+    */
     void Draw()
     {
+        // If the enemy is not touching the platform, calculates the change in y according
+        // to game physics.
         if (!CollisionBox().BoxIntersection(main_platform))
         {
             t += 0.1;
@@ -747,11 +791,16 @@ public:
         else
         {
             t = 0;
+            // Sets y to just above the platform to ensure the enemy doesn't get stuck in it
+            // because of high velocity falling.
             y = 220 - h;
         }
 
+        // Checks if enemy is dead or not; processes death animation logic by calling Death()
         if (!Death())
         {
+            // Changes the sprite of the enemy every frames_speed no. of update cycles
+            // Updates the x coordinates by the speed specified
             frames_check = t_frames / frames_speed != 0;
             if (right_check)
             {
@@ -777,15 +826,29 @@ public:
                 }
                 x -= speed;
             }
+            // Increments the t_frames frame timer in the base that is twice as much as the frames_speed
+            // because there are two sprites to cycle between
             t_frames = (t_frames + 1) % (frames_speed * 2);
         }
     }
 };
 
-// Regular enemy with 1 health and medium speed
+// Shreyash
+/*
+  Child class extending Enemy, controls the specific behavior of the regular enemy.
+*/
 class EnemyRegular : public Enemy
 {
 public:
+    /*
+      Constructor.
+      Parameter right can be used to control which direction the enemy will come from.
+      Opens the appropriate images for the regular enemy type.
+      Sets the width and height according to the images being opened.
+      Sets the health to 1 (requires 1 hit to die).
+      Sets speed to 0.5 (medium).
+      Sets the initial spawn points to above the screen so that the enemy falls down from either side.
+    */
     EnemyRegular(bool right)
     {
         w = 20;
@@ -816,10 +879,21 @@ public:
     }
 };
 
-// Armored enemy with 3 health and slow speed
+/*
+  Child class extending Enemy, controls the specific behavior of the armored enemy.
+*/
 class EnemyArmored : public Enemy
 {
 public:
+    /*
+      Constructor.
+      Parameter right can be used to control which direction the enemy will come from.
+      Opens the appropriate images for the armored enemy type.
+      Sets the width and height according to the images being opened.
+      Sets the health to 5 (requires 5 hits to die).
+      Sets speed to 0.3 (slow).
+      Sets the initial spawn points to above the screen so that the enemy falls down from either side.
+    */
     EnemyArmored(bool right)
     {
         w = 20;
@@ -850,10 +924,21 @@ public:
     }
 };
 
-// Fast enemy with 1 health and fast speed
+/*
+  Child class extending Enemy, controls the specific behavior of the fast enemy.
+*/
 class EnemyFast : public Enemy
 {
 public:
+    /*
+      Constructor.
+      Parameter right can be used to control which direction the enemy will come from.
+      Opens the appropriate images for the fast enemy type.
+      Sets the width and height according to the images being opened.
+      Sets the health to 1 (requires 1 hit to die).
+      Sets speed to 1 (fast).
+      Sets the initial spawn points to above the screen so that the enemy falls down from either side.
+    */
     EnemyFast(bool right)
     {
         w = 20;
@@ -884,8 +969,12 @@ public:
     }
 };
 
+// A global vector that contains all the enemy objects
 vector<Enemy *> enemies;
 
+/*
+  Helper function to randomly spawn the regular enemy from left or right.
+*/
 void SpawnEnemyRegular()
 {
     bool random_num = rand() % 2;
@@ -893,6 +982,9 @@ void SpawnEnemyRegular()
     enemies.push_back(new_enemy);
 }
 
+/*
+  Helper function to randomly spawn the armored enemy from left or right.
+*/
 void SpawnEnemyArmored()
 {
     bool random_num = rand() % 2;
@@ -900,6 +992,9 @@ void SpawnEnemyArmored()
     enemies.push_back(new_enemy);
 }
 
+/*
+  Helper function to randomly spawn the fast enemy from left or right.
+*/
 void SpawnEnemyFast()
 {
     bool random_num = rand() % 2;
@@ -907,6 +1002,7 @@ void SpawnEnemyFast()
     enemies.push_back(new_enemy);
 }
 
+// Jack
 // This is the function that runs the main game
 void Play()
 {
