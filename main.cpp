@@ -2,7 +2,7 @@
 #include "FEHUtility.h"
 #include "FEHImages.h"
 #include "Windows.h"
-#include "Windows.h"
+#include <time.h>
 #include <array>
 #include <vector>
 #include <iostream>
@@ -16,124 +16,169 @@ using namespace std;
 /*
     Buttons and Utility
 */
+// Shreyash
 struct Box
 {
+    /*
+    Box Struct (Shreyash)
+
+    This struct creates a collision box for different objects and
+    checks if clicks or other boxes intersect with the box.
+    */
     int x1, y1, x2, y2; // left, top, right, bottom
 
+    // Constructor for the struct that sets the coordinates entered to the value of the top left and bottom right corners of the hit box
     Box(int x1_0, int y1_0, int x2_0, int y2_0)
     {
         x1 = x1_0, y1 = y1_0, x2 = x2_0, y2 = y2_0;
     }
 
+    // Checks if a point falls within the box, if it does true is returned
     bool PointIntersection(int x, int y)
     {
         return x >= x1 && x <= x2 && y >= y1 && y <= y2;
     }
 
+    // Checks if two boxes collide, if they do, true is returned
     bool BoxIntersection(Box box2)
     {
         return (x2 >= box2.x1) && (x1 <= box2.x2) && (y2 >= box2.y1) && (y1 <= box2.y2);
     }
 
+    // Checks if the end of the screen is reached
     bool ScreenIntersection()
     {
         return x1 < 0 || x2 > LCD_WIDTH || y2 > LCD_HEIGHT;
     }
 };
 
+// Creates the main platform as a box object
 Box main_platform(40, 220, 280, 239);
 
 class Button
 {
+    /*
+    Button Class (Shreyash)
+
+    This class is made to create the buttons on the menu. It takes their coordinates
+    and any text associated and displays them to the screen. It also takes the button's
+    function and when the button is pressed, the proper function is called.
+    */
 private:
+    // Initializes the varibles for the x and y coordinates of the box, text, font colors, text array, and a function pointer
     int x, y, w, h, text_length, x_t, y_t;
     unsigned int border_color = WHITE, fill_color = BLACK, text_color = WHITE;
     char text[30];
     void (*function)();
 
 public:
+    // Constructor the button class and sets the values of width and height to 1
     Button(int w1 = 1, int h1 = 1) : w(w1), h(h1) {}
 
+    // Sets the x coordinate to the value passed into the function
     void SetXCoord(int x1)
     {
         x = x1;
     }
 
+    // Sets the y coordinate to the value passed into the function
     void SetYCoord(int y1)
     {
         y = y1;
     }
 
+    // Sets the x coordinate based on the proportion
     void SetXProp(float x_prop)
     {
+        // Takes the proportion (values 0-1) and multiplies it by LCD width then subtracts the width of the button / 2
         x = x_prop * LCD_WIDTH - w / 2;
     }
 
+    // Sets the y coordinate based on the proportion
     void SetYProp(float y_prop)
     {
+        // Takes the proportion (values 0-1) and multiplies it by LCD width then subtracts the height of the button / 2
         y = y_prop * LCD_HEIGHT - h / 2;
     }
 
+    // Sets border color to value passed into function
     void SetBorderColor(unsigned int color)
     {
         border_color = color;
     }
 
+    // Sets fill color to value passed into function
     void SetFillColor(unsigned int color)
     {
         fill_color = color;
     }
 
+    // Sets text color to value passed into function
     void SetTextColor(unsigned int color)
     {
         text_color = color;
     }
 
+    // Takes in a char array and copies it into the text variable. Notes the length of the string.
     void SetText(char str[])
     {
         text_length = strlen(str);
         strcpy(text, str);
     }
 
+    // Sets the width of the button
     void SetWidth(int w1)
     {
         w = w1;
     }
 
+    // Sets the height of the button
     void SetHeight(int h1)
     {
         h = h1;
     }
 
+    // Tells the button what its function is. When the button is pressed, this function will be called
     void SetFunction(void funct())
     {
         function = funct;
     }
 
+    // Displays the button to the screen
     void Create()
     {
+        // Sets font color and draws the rectangle and fills it
         LCD.SetFontColor(fill_color);
         LCD.FillRectangle(x, y, w, h);
+        // Sets font color and draws the border of the rectangle
         LCD.SetFontColor(border_color);
         LCD.DrawRectangle(x, y, w, h);
+        // Centers the text inside the button
         x_t = x + (w - (text_length * CHAR_WIDTH)) / 2, y_t = y + (h - CHAR_HEIGHT) / 2;
         LCD.SetFontColor(text_color);
         LCD.WriteAt(text, x_t, y_t);
     }
 
+    // Checks to see if a click was inside the button's area
     void Check(float x_press, float y_press)
     {
+        // Creates a button object at the coordinates of the button the function is checking
         Box button(x, y, x + w, y + h);
+        // Checks to see if the click falls inside the button being checked
         if (button.PointIntersection(x_press, y_press))
         {
+            // If the click was inside the button, the function for the button being checked is called
             function();
         }
     }
 };
 
+// Writes text in the center of the screen at height y (Shreyash)
 void WriteCenter(char str[], int y)
 {
+    // Calculates how wide the text will be on the screen
     int length = strlen(str) * CHAR_WIDTH;
+    // Finds the position x where the text will be centered and displays it to the screen
     int x = (LCD_WIDTH / 2) - length / 2;
     LCD.WriteAt(str, x, y);
 }
@@ -141,8 +186,10 @@ void WriteCenter(char str[], int y)
 // Blueprints
 void Menu(), Play(), Credits(), Instructions(), Statistics(), Quit();
 
+// Checks to see if the back button is pressed (Shreyash)
 void BackButtonCheck()
 {
+    // Creates a back button at the button of the screen
     Button backButton;
     backButton.SetWidth(100);
     backButton.SetHeight(25);
@@ -155,37 +202,46 @@ void BackButtonCheck()
     backButton.SetFunction(Menu);
     backButton.Create();
     float x, y;
+    // Waits until the button is pressed
     while (true)
     {
+        // Waits until the screen is clicked and tracks the coordinates of the click
         while (!LCD.Touch(&x, &y))
         {
         }
+        // Waits until the click is released
         while (LCD.Touch(&x, &y))
         {
         }
+        // Checks if the back button was pressed at this x and y coordinate
         backButton.Check(x, y);
     }
 }
 
-/*
-    SDP Menu Creation
+void Menu()
+{
+    /*
+    SDP Menu Creation (Jack)
 
     Create a menu screen with 5 buttons the user can press. The options are
     Play, "Statistics", "Instructions", "Credits", or Quit.
     Each of the 3 info pages have a Back Button to return to Menu.
-*/
-void Menu()
-{
+    */
     LCD.SetBackgroundColor(BLACK);
     LCD.Clear();
 
-    int w, h = 25, y_diff = 10, y_start = 40;
+    LCD.SetFontColor(WHITE);
+    WriteCenter("Astraia: A Last Stand", 10);
+    WriteCenter("__________________________", 20);
+
+    int w, h = 25, y_diff = 10, y_start = 50;
     float x_prop = 0.5;
     char labels[5][30] = {"Play", "Credits", "Instructions", "Statistics", "Quit"};
     void (*functions[5])() = {Play, Credits, Instructions, Statistics, Quit};
 
     Button menu_buttons[5];
 
+    // Uses a for loop to create the buttons used for the menu
     for (int b = 0; b < 5; b++)
     {
         w = (strlen(labels[b]) + 2) * CHAR_WIDTH;
@@ -195,20 +251,25 @@ void Menu()
         menu_buttons[b].SetYCoord(y_start + b * (h + y_diff));
         menu_buttons[b].SetText(labels[b]);
         menu_buttons[b].SetBorderColor(LIGHTGRAY);
-        menu_buttons[b].SetFillColor(MEDIUMBLUE);
+        menu_buttons[b].SetFillColor(DARKSLATEGRAY);
         menu_buttons[b].SetTextColor(LIGHTGRAY);
         menu_buttons[b].SetFunction(functions[b]);
         menu_buttons[b].Create();
     }
+    // Runs until the user presses a button
     while (true)
     {
+        // Creates values that track where the user presses on the screen
         int x, y;
+        // Waits until a press is detected and stores the x, y coordinates in the ints x, y
         while (!LCD.Touch(&x, &y))
         {
         }
+        // Waits until the press is released
         while (LCD.Touch(&x, &y))
         {
         }
+        // Checks all 5 menu buttons to see if the x and y coordinates are within the coordinates of the button and executes their function if they were pressed
         for (int c = 0; c < 5; c++)
         {
             menu_buttons[c].Check(x, y);
@@ -220,19 +281,31 @@ void Menu()
 
 class Bullet
 {
+    /*
+    Bullet Class Creation (Jack)
+
+    Creates the class for the bullets that sets their generic
+    values and ensures that only one bullet is present on the
+    screen at one time. It also tracks collisions with enemies
+    and no longer draws the bullet if it collides.
+    */
 private:
+    // The coordinates and the radius are initialized. The color is set to yellow. There are bools to see if the bullet is facing right and visible.
     float x, y, r = 1;
     unsigned int color = YELLOW;
     bool right_check, visible_check = false;
 
 public:
+    // The constructor for the bullet class takes in the x and y coordinates of player and checks if the player is moving right
     void Create(float x1, float y1, bool right)
     {
+        // Sets the values of the bullet to the player's coordinates with a slight offset so the bullet appears outside the player. Sets the right check and visibility.
         x = x1, y = y1;
         right_check = right;
         visible_check = true;
     }
 
+    // Returns the values of the top left and bottom right x, y coordinates
     Box CollisionBox()
     {
         return Box(x - r, y - r, x + r, y + r);
@@ -240,14 +313,17 @@ public:
 
     void Draw()
     {
+        // If bullet goes off screen, it stops being visible
         if (CollisionBox().ScreenIntersection())
         {
             visible_check = false;
         }
+        // LCD got cleared and bullet needs to be redrawn. It is also having it's position updated.
         if (visible_check)
         {
             LCD.SetFontColor(color);
             LCD.DrawCircle(x, y, r);
+            // If bullet is moving right increment it by 5, otherwise decrement it by 5
             if (right_check)
             {
                 x += 5;
@@ -259,11 +335,13 @@ public:
         }
     }
 
+    // If bullet collides with an enemy make it no longer visible
     void Kill()
     {
         visible_check = false;
     }
 
+    // Returns if player is able to shoot another bullet
     bool Available()
     {
         return !visible_check;
@@ -272,7 +350,25 @@ public:
 
 class Player
 {
+    /*
+    Player Class Creation (Jack)
+
+    Creates the class for the player that begins with
+    initializing variables that track the player's state.
+    The class then tracks the keyboard inputs to move
+    the player across the screen and shoot bullets.
+    The class also draws the player based on their orientation
+    and animates the player's movement. It tracks if the player takes
+    damage, their hit box, and returns if they're dead.
+
+    */
 private:
+    /*
+    Sets the amount of hearts the player has, their current health, their position,
+    their current states including direction, jumping, shooting, death, and hits.
+    The images for the players left and right animations as well as the hearts are imported
+    and a bullet object is created.
+    */
     const int total_health = 5;
     int health = total_health;
     float x, y, w, h;
@@ -285,6 +381,7 @@ private:
     Bullet b1;
 
 public:
+    // This constructor opens all possible images for the player and sets their basic values for coordinates
     Player()
     {
         w = 15, h = 55;
@@ -302,27 +399,42 @@ public:
         player_hits.Open("heart_empty.png");
     }
 
+    // Returns the value of the hit box
     Box CollisionBox()
     {
         return Box(x, y, x + w, y + h);
     }
 
+    // If the "D" key is pressed the player's x coordinate is increased
     void moveRight()
     {
         right_check = true;
         step_check = true;
         x += 2;
+        // If the character is jumping the x coordinate will increase extra to allow for dodging enemies
+        if (jump_check)
+        {
+            x += 1;
+        }
     }
 
+    // If the "A" key is pressed the player's x coordinate is decreased
     void moveLeft()
     {
         right_check = false;
         step_check = true;
         x -= 2;
+        // If the character is jumping the x coordinate will decrease extra to allow for dodging enemies
+        if (jump_check)
+        {
+            x -= 1;
+        }
     }
 
+    // If the "W" key is pressed the player's y coordinate is increased
     void jump()
     {
+        // Ensures that the player can't jump while already in the air
         if (!jump_check)
         {
             jump_check = true;
@@ -331,15 +443,19 @@ public:
         }
     }
 
+    // If the "CTRL" key is pressed the player shoots a bullet
     void shoot()
     {
+        // If the bullet has been moving for 30 iterations or less
         if (bullet_timer > 30)
         {
+            // Creates the bullet to the right and shoots it right
             if (right_check)
             {
 
                 b1.Create(x + w, y + 28, true);
             }
+            // Creates the bullet to the left and shoots it left
             else
             {
 
@@ -349,12 +465,14 @@ public:
         }
     }
 
+    // If the player is hit by the enemy, the health decreases by 1 heart and that enemy can no longer hurt the player
     void Hit()
     {
         health--;
         hit_check = true;
     }
 
+    // Checks to see if the player is dead and returns true if they are
     bool Dead()
     {
         return health == 0;
@@ -366,20 +484,26 @@ public:
         b1.Draw();
         bullet_timer++;
         // calculate change in y coordinates
+
+        // If the player is not touching the platform
         if (!CollisionBox().BoxIntersection(main_platform))
         {
             t += 0.1;
             if (jump_check)
             {
+                // Equation for gravity derived from kinematics
                 y += v_jump * t + 0.5 * GRAVITY * t * t;
             }
+            // Allows the player to fall off the platform if they aren't jumping
             else
             {
                 y += 0.5 * GRAVITY * t * t;
             }
 
+            // If player goes off end of screen
             if (CollisionBox().ScreenIntersection())
             {
+                // Decrement their health and respawn them in the middle of the screen
                 Hit();
                 x = 153;
                 y = 220 - h - 10;
@@ -393,10 +517,11 @@ public:
         }
 
         // check if player is dead
-        if (health != 0)
+        if (health > 0)
         {
             if (right_check)
             {
+                // If player is hit and the hit animation is within 10 iterations (100ms)
                 if (hit_check && hit_timer < 10)
                 {
                     hit_timer++;
@@ -405,20 +530,24 @@ public:
                 else
                 {
                     hit_check = false;
+                    hit_timer = 0;
                     if (step_check)
                     {
                         step_check = false;
                         if (step_num)
                         {
+                            // Lifts the first leg and causes legs to alternate
                             step_num = false;
                             player_right_1.Draw(x, y);
                         }
                         else
                         {
+                            // Lifts the second leg and causes legs to alternate
                             step_num = true;
                             player_right_2.Draw(x, y);
                         }
                     }
+                    // Doesn't keep stepping after player has moved
                     else
                     {
                         player_right_0.Draw(x, y);
@@ -427,6 +556,7 @@ public:
             }
             else
             {
+                // If player is hit and the hit animation is within 10 iterations (100ms)
                 if (hit_check && hit_timer < 10)
                 {
                     hit_timer++;
@@ -440,15 +570,18 @@ public:
                         step_check = false;
                         if (step_num)
                         {
+                            // Lifts the first leg and causes legs to alternate
                             step_num = false;
                             player_left_1.Draw(x, y);
                         }
                         else
                         {
+                            // Lifts the second leg and causes legs to alternate
                             step_num = true;
                             player_left_2.Draw(x, y);
                         }
                     }
+                    // Doesn't keep stepping after player has moved
                     else
                     {
                         player_left_0.Draw(x, y);
@@ -461,12 +594,15 @@ public:
         LCD.SetFontColor(DARKSLATEGRAY);
         LCD.DrawRectangle(1, 232, 318, 7);
         LCD.FillRectangle(1, 232, 318, 7);
+        // Draw hearts
         for (int h = 0; h < total_health; h++)
         {
+            // Draw red hearts
             if (h < health)
             {
                 player_hearts.Draw(7 * h + 1, 232);
             }
+            // Draw brown hearts
             else
             {
                 player_hits.Draw(7 * h + 1, 232);
@@ -474,22 +610,26 @@ public:
         }
     }
 
+    // Returns top left and bottom right x,y coordinates of bullet
     Box BulletCollisionBox()
     {
         return b1.CollisionBox();
     }
 
+    // Stops drawing bullet and allows you to shoot another bullet
     void BulletKill()
     {
         b1.Kill();
     }
 
+    // Checks if a bullet is available to allow player to shoot again. Should also check if bullet exists.
     bool BulletCheck()
     {
         return !b1.Available();
     }
 };
 
+// Shreyash
 class Enemy
 {
 protected:
@@ -533,7 +673,7 @@ public:
         {
             dead_counter = 3;
         }
-        else if (health == 0)
+        else if (health <= 0)
         {
             if (dead_counter < 3)
             {
@@ -662,7 +802,7 @@ public:
         enemy_dead_left_3.Open("xenos_dead_left_3.png");
         right_check = right;
         health = 1;
-        speed = 0.4;
+        speed = 0.5;
         frames_speed = 10;
         y = 0 - h;
         if (right)
@@ -695,8 +835,8 @@ public:
         enemy_dead_right_3.Open("xenos_dead_right_3.png");
         enemy_dead_left_3.Open("xenos_dead_left_3.png");
         right_check = right;
-        health = 3;
-        speed = 0.2;
+        health = 5;
+        speed = 0.3;
         frames_speed = 10;
         y = 0 - h;
         if (right)
@@ -767,81 +907,124 @@ void SpawnEnemyFast()
     enemies.push_back(new_enemy);
 }
 
+// This is the function that runs the main game
 void Play()
 {
+    // Clears the main menu and sets initial values
     LCD.Clear();
     Player player;
+    FEHImage Background;
+    Background.Open("background.png");
     int kill_count = 0, final_time = 0;
     int time_0 = time(NULL), time_c;
     bool second_over_regular = true;
     bool second_over_armored = true;
     bool second_over_fast = true;
     bool second_over_regular_2 = true;
+    bool second_over_armored_2 = true;
+    bool second_over_fast_2 = true;
     while (true)
     {
+        // Gets the current time and draws the background
         time_c = time(NULL) - time_0;
         LCD.Clear();
+        Background.Draw(1, 1);
         LCD.SetFontColor(WHITE);
         LCD.DrawRectangle(40, 220, 240, 19);
         LCD.FillRectangle(40, 220, 240, 19);
+
+        // If "A" is clicked, the moveLeft function is called
         if (GetAsyncKeyState(0x41) & 0x8000)
         {
             player.moveLeft();
         }
+
+        // If "D" is clicked, the moveRight function is called
         if (GetAsyncKeyState(0x44) & 0x8000)
         {
             player.moveRight();
         }
+
+        // If "W" is clicked, the jump function is called
         if (GetAsyncKeyState(0x57) & 0x8000)
         {
             player.jump();
         }
+
+        // If "CTRL" is clicked, the shoot function is called
         if (GetAsyncKeyState(0x11) & 0x8000)
         {
             player.shoot();
         }
         player.Draw();
 
-        if (time_c % 7 == 0 && second_over_regular)
+        // If 4 seconds have passed, new regular enemy is spawned
+        if (time_c % 4 == 0 && second_over_regular)
         {
             SpawnEnemyRegular();
             second_over_regular = false;
         }
-        if (time_c % 7 == 1)
+        if (time_c % 4 == 1)
         {
             second_over_regular = true;
         }
 
-        if (time_c > 35 && time_c % 13 == 0 && second_over_armored)
+        // After 20 seconds, every 7 seconds, the armored enemy will spawn
+        if (time_c > 20 && time_c % 7 == 0 && second_over_armored)
         {
             SpawnEnemyArmored();
             second_over_armored = false;
         }
-        if (time_c % 13 == 1)
+        if (time_c % 7 == 1)
         {
             second_over_armored = true;
         }
 
-        if (time_c > 70 && time_c % 9 == 0 && second_over_fast)
+        // After 45 seconds, and every 10 seconds, the fast enemy will spawn
+        if (time_c > 45 && time_c % 10 == 0 && second_over_fast)
         {
             SpawnEnemyFast();
             second_over_fast = false;
         }
-        if (time_c % 9 == 1)
+        if (time_c % 10 == 1)
         {
             second_over_fast = true;
         }
 
-        if (time_c > 150 && time_c % 5 == 0 && second_over_regular_2)
+        // After 60 seconds, the regular enemy will spawn every 3 seconds
+        if (time_c > 60 && time_c % 3 == 0 && second_over_regular_2)
         {
-            SpawnEnemyFast();
+            SpawnEnemyRegular();
             second_over_regular_2 = false;
         }
-        if (time_c % 5 == 1)
+        if (time_c % 3 == 1)
         {
             second_over_regular_2 = true;
         }
 
+        // After 90 seconds, every 8 seconds, the armored enemy will spawn
+        if (time_c > 90 && time_c % 8 == 0 && second_over_armored_2)
+        {
+            SpawnEnemyArmored();
+            second_over_armored_2 = false;
+        }
+        if (time_c % 8 == 1)
+        {
+            second_over_armored_2 = true;
+        }
+
+        // After 150 seconds, and every 5 seconds, the fast enemy will spawn
+        if (time_c > 150 && time_c % 5 == 0 && second_over_fast_2)
+        {
+            SpawnEnemyFast();
+            second_over_fast_2 = false;
+        }
+        if (time_c % 5 == 1)
+        {
+            second_over_fast_2 = true;
+        }
+
+        // Removed dead enemies from the vector
         for (int i = 0; i < enemies.size(); i++)
         {
             if (enemies[i]->Dead())
@@ -850,15 +1033,19 @@ void Play()
             }
         }
 
+        // Runs for entire enemy vector
         for (Enemy *enemy : enemies)
         {
             enemy->Draw();
+            // If enemy collides with the bullet and the bullet is supposed to be there
             if (enemy->CollisionBox().BoxIntersection(player.BulletCollisionBox()) && player.BulletCheck())
             {
                 kill_count++;
                 enemy->Hit();
                 player.BulletKill();
             }
+
+            // If the enemy collides with the player and hasn't already hit the player before
             if (enemy->CollisionBox().BoxIntersection(player.CollisionBox()) && !enemy->CheckPlayerHit())
             {
                 enemy->PlayerHit();
@@ -866,6 +1053,7 @@ void Play()
             }
         }
 
+        // If player has no more lives, the final time is noted for the stats and the game is stopped
         if (player.Dead())
         {
             final_time = time(NULL) - time_0;
@@ -873,12 +1061,15 @@ void Play()
             break;
         }
 
+        // Slight pause to keep the while loop from overloading
         Sleep(10);
     }
 
+    // Score is calculated
     int score = kill_count * 7 + final_time;
     int high_score, total_kill_count, best_time;
 
+    // Reading values from stats file
     ifstream high_score_in;
     high_score_in.open("statistics.txt");
     high_score_in >> high_score;
@@ -886,6 +1077,7 @@ void Play()
     high_score_in >> best_time;
     high_score_in.close();
 
+    // If player gets a new highscore, replace old highscore
     if (score > high_score)
     {
         high_score = score;
@@ -896,6 +1088,7 @@ void Play()
     }
     total_kill_count += kill_count;
 
+    // Writing the values to the highscore out file
     ofstream high_score_out;
     high_score_out.open("statistics.txt");
     high_score_out << high_score << endl;
@@ -903,6 +1096,7 @@ void Play()
     high_score_out << best_time;
     high_score_out.close();
 
+    // Clear screen and display the score
     LCD.Clear();
     LCD.SetFontColor(WHITE);
 
@@ -911,11 +1105,13 @@ void Play()
     char kills_text[30];
     char time_text[30];
 
+    // Stores the text as a string
     sprintf(score_text, "Score: %i", score);
     sprintf(high_score_text, "High Score: %i", high_score);
     sprintf(kills_text, "Kills: %i", kill_count);
     sprintf(time_text, "Time: %i", final_time);
 
+    // Displays the high scores to the screen and the current scores as well
     WriteCenter(score_text, 20);
     WriteCenter(high_score_text, 40);
     WriteCenter(kills_text, 60);
@@ -965,8 +1161,8 @@ void Instructions()
 void Statistics()
 {
     /*
-      Reset the background color, clear the screen,
-      then write out the statistics.
+      Read in the values from the high score file. Stores them as strings
+      and displays them to the screen.
     */
     int high_score, total_kill_count, best_time;
 
@@ -997,6 +1193,7 @@ void Statistics()
 
 void Quit()
 {
+    // This creates a button that quits the program and closes the simulator
     LCD.SetBackgroundColor(BLACK);
     LCD.Clear();
     exit(0);
