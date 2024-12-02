@@ -1249,7 +1249,7 @@ void Instructions()
     WriteCenter("as long as possible to get", 110);
     WriteCenter("a high score.", 130);
     WriteCenter("You have 5 hearts.", 150);
-    WriteCenter("Good luck!", 150);
+    WriteCenter("Good luck!", 170);
 
     // Create and check a back button to return to the main menu
     BackButtonCheck();
