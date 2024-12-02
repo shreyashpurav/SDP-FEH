@@ -405,7 +405,7 @@ public:
         return Box(x, y, x + w, y + h);
     }
 
-    // If the "D" key is pressed the player's x coordinate is increased
+    // If the "D"/right-arrow key is pressed the player's x coordinate is increased
     void moveRight()
     {
         right_check = true;
@@ -418,7 +418,7 @@ public:
         }
     }
 
-    // If the "A" key is pressed the player's x coordinate is decreased
+    // If the "A"/left-arrow key is pressed the player's x coordinate is decreased
     void moveLeft()
     {
         right_check = false;
@@ -431,7 +431,7 @@ public:
         }
     }
 
-    // If the "W" key is pressed the player's y coordinate is increased
+    // If the "W"/up-arrow key is pressed the player's y coordinate is increased
     void jump()
     {
         // Ensures that the player can't jump while already in the air
@@ -1029,20 +1029,20 @@ void Play()
         LCD.DrawRectangle(40, 220, 240, 19);
         LCD.FillRectangle(40, 220, 240, 19);
 
-        // If "A" is clicked, the moveLeft function is called
-        if (GetAsyncKeyState(0x41) & 0x8000)
+        // If "A" or left arrow key is clicked, the moveLeft function is called
+        if ((GetAsyncKeyState(0x41) | GetAsyncKeyState(0x25)) & 0x8000)
         {
             player.moveLeft();
         }
 
-        // If "D" is clicked, the moveRight function is called
-        if (GetAsyncKeyState(0x44) & 0x8000)
+        // If "D" or right arrow key is clicked, the moveRight function is called
+        if ((GetAsyncKeyState(0x44) | GetAsyncKeyState(0x27)) & 0x8000)
         {
             player.moveRight();
         }
 
-        // If "W" is clicked, the jump function is called
-        if (GetAsyncKeyState(0x57) & 0x8000)
+        // If "W" or up arrow key is clicked, the jump function is called
+        if ((GetAsyncKeyState(0x57) | GetAsyncKeyState(0x26)) & 0x8000)
         {
             player.jump();
         }
@@ -1243,12 +1243,13 @@ void Instructions()
     LCD.SetFontColor(WHITE);
     WriteCenter("INSTRUCTIONS", 10);
     WriteCenter("__________________________", 20);
-    WriteCenter("Use WAS to move and CTRL", 50);
-    WriteCenter("to shoot. Kill ", 70);
-    WriteCenter("enemies and survive", 90);
-    WriteCenter("as long as possible", 110);
-    WriteCenter("to get a high score.", 130);
+    WriteCenter("Use W A S or arrow keys to", 50);
+    WriteCenter("move and CTRL to shoot.", 70);
+    WriteCenter("Kill enemies and survive", 90);
+    WriteCenter("as long as possible to get", 110);
+    WriteCenter("a high score.", 130);
     WriteCenter("You have 5 hearts.", 150);
+    WriteCenter("Good luck!", 150);
 
     // Create and check a back button to return to the main menu
     BackButtonCheck();
