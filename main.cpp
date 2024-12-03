@@ -1,8 +1,6 @@
 #include "FEHLCD.h"
 #include "FEHUtility.h"
 #include "FEHImages.h"
-#include "Windows.h"
-#include <time.h>
 #include <array>
 #include <vector>
 #include <iostream>
@@ -197,7 +195,7 @@ void BackButtonCheck()
     backButton.SetYProp(0.9);
     backButton.SetText("Back");
     backButton.SetBorderColor(LIGHTGRAY);
-    backButton.SetFillColor(MEDIUMBLUE);
+    backButton.SetFillColor(DARKSLATEGRAY);
     backButton.SetTextColor(LIGHTGRAY);
     backButton.SetFunction(Menu);
     backButton.Create();
@@ -292,17 +290,23 @@ class Bullet
 private:
     // The coordinates and the radius are initialized. The color is set to yellow. There are bools to see if the bullet is facing right and visible.
     float x, y, r = 1;
+    int reload_timer = 20;
     unsigned int color = YELLOW;
     bool right_check, visible_check = false;
 
 public:
     // The constructor for the bullet class takes in the x and y coordinates of player and checks if the player is moving right
-    void Create(float x1, float y1, bool right)
+    bool Create(float x1, float y1, bool right)
     {
         // Sets the values of the bullet to the player's coordinates with a slight offset so the bullet appears outside the player. Sets the right check and visibility.
-        x = x1, y = y1;
-        right_check = right;
-        visible_check = true;
+        if (reload_timer > 30)
+        {
+            x = x1, y = y1;
+            right_check = right;
+            visible_check = true;
+            reload_timer = 0;
+        }
+        return reload_timer == 0;
     }
 
     // Returns the values of the top left and bottom right x, y coordinates
@@ -313,6 +317,7 @@ public:
 
     void Draw()
     {
+        reload_timer++;
         // If bullet goes off screen, it stops being visible
         if (CollisionBox().ScreenIntersection())
         {
@@ -372,8 +377,8 @@ private:
     const int total_health = 5;
     int health = total_health;
     float x, y, w, h;
-    float t = 0, v_jump = -7, bullet_timer = 20, hit_timer = 0;
-    bool right_check = true, jump_check = false, shoot_check = false, dead_check = false, hit_check = false;
+    float t = 0, v_jump = -7, hit_timer = 0;
+    bool right_check = true, jump_check = false, shoot_check = false, dead_check = false, hit_check = false, turn_check = true;
     bool step_check = false, step_num = 0;
     FEHImage player_left_0, player_left_1, player_left_2, player_left_hit;
     FEHImage player_right_0, player_right_1, player_right_2, player_right_hit;
@@ -408,27 +413,52 @@ public:
     // If the "D"/right-arrow key is pressed the player's x coordinate is increased
     void moveRight()
     {
-        right_check = true;
-        step_check = true;
-        x += 2;
-        // If the character is jumping the x coordinate will increase extra to allow for dodging enemies
+        if (!jump_check)
+        {
+            right_check = true;
+            step_check = true;
+            x += 2;
+        }
+    }
+
+    void turnRight()
+    {
+        if (turn_check)
+        {
+            right_check = true;
+        }
         if (jump_check)
         {
-            x += 1;
+            x += 3;
         }
     }
 
     // If the "A"/left-arrow key is pressed the player's x coordinate is decreased
     void moveLeft()
     {
-        right_check = false;
-        step_check = true;
-        x -= 2;
-        // If the character is jumping the x coordinate will decrease extra to allow for dodging enemies
+        if (!jump_check)
+        {
+            right_check = false;
+            step_check = true;
+            x -= 2;
+        }
+    }
+
+    void turnLeft()
+    {
+        if (turn_check)
+        {
+            right_check = false;
+        }
         if (jump_check)
         {
-            x -= 1;
+            x -= 3;
         }
+    }
+
+    void enemyTurn(bool turn)
+    {
+        turn_check = turn;
     }
 
     // If the "W"/up-arrow key is pressed the player's y coordinate is increased
@@ -446,23 +476,7 @@ public:
     // If the "CTRL" key is pressed the player shoots a bullet
     void shoot()
     {
-        // If the bullet has been moving for 30 iterations or less
-        if (bullet_timer > 30)
-        {
-            // Creates the bullet to the right and shoots it right
-            if (right_check)
-            {
-
-                b1.Create(x + w, y + 28, true);
-            }
-            // Creates the bullet to the left and shoots it left
-            else
-            {
-
-                b1.Create(x, y + 28, false);
-            }
-            bullet_timer = 0;
-        }
+        b1.Create(x + w, y + 28, right_check);
     }
 
     // If the player is hit by the enemy, the health decreases by 1 heart and that enemy can no longer hurt the player
@@ -475,14 +489,13 @@ public:
     // Checks to see if the player is dead and returns true if they are
     bool Dead()
     {
-        return health == 0;
+        return health <= 0;
     }
 
     void Draw()
     {
         // draw shot bullet
         b1.Draw();
-        bullet_timer++;
         // calculate change in y coordinates
 
         // If the player is not touching the platform
@@ -637,7 +650,7 @@ public:
 */
 class Enemy
 {
-// Uses protected to ensure that extending classes are able to access variables
+    // Uses protected to ensure that extending classes are able to access variables
 protected:
     // dead_counter tracks which picture in the 3-picture death animation to show
     // dead_timer spaces the death animation transitions out to make the animation human visible
@@ -650,7 +663,7 @@ protected:
     // right_check stores the direction the sprite faces: true = right, false = left
     // hit_check stores whether the enemy has hit the player or not (can only hit once)
     // frames_check uses t_frames and frames_speed to calculate which image to display for motion
-    bool right_check, hit_check = false, frames_check = false;
+    bool right_check, hit_check = false, frames_check = false, random_death_check = false;
     // Moving enemy images
     FEHImage enemy_left_1, enemy_left_2, enemy_right_1, enemy_right_2;
     // Death animation images
@@ -799,6 +812,14 @@ public:
         // Checks if enemy is dead or not; processes death animation logic by calling Death()
         if (!Death())
         {
+
+            if (random_death_check)
+            {
+                if ((rand() % 100) == 7)
+                {
+                    health = 0;
+                }
+            }
             // Changes the sprite of the enemy every frames_speed no. of update cycles
             // Updates the x coordinates by the speed specified
             frames_check = t_frames / frames_speed != 0;
@@ -865,7 +886,7 @@ public:
         enemy_dead_left_3.Open("xenos_dead_left_3.png");
         right_check = right;
         health = 1;
-        speed = 0.5;
+        speed = 0.4;
         frames_speed = 10;
         y = 0 - h;
         if (right)
@@ -909,8 +930,8 @@ public:
         enemy_dead_right_3.Open("xenos_dead_right_3.png");
         enemy_dead_left_3.Open("xenos_dead_left_3.png");
         right_check = right;
-        health = 5;
-        speed = 0.3;
+        health = 3;
+        speed = 0.2;
         frames_speed = 10;
         y = 0 - h;
         if (right)
@@ -935,8 +956,8 @@ public:
       Parameter right can be used to control which direction the enemy will come from.
       Opens the appropriate images for the fast enemy type.
       Sets the width and height according to the images being opened.
-      Sets the health to 1 (requires 1 hit to die).
-      Sets speed to 1 (fast).
+      Sets the health to 1 (requires 1 hit to die, small chance of dying automatically)
+      Sets speed to 0.8 (fast).
       Sets the initial spawn points to above the screen so that the enemy falls down from either side.
     */
     EnemyFast(bool right)
@@ -953,9 +974,10 @@ public:
         enemy_dead_left_2.Open("xenos_dead_left_2.png");
         enemy_dead_right_3.Open("xenos_dead_right_3.png");
         enemy_dead_left_3.Open("xenos_dead_left_3.png");
+        random_death_check = (rand() % 5) == 0;
         right_check = right;
         health = 1;
-        speed = 1;
+        speed = 0.8;
         frames_speed = 5;
         y = 0 - h;
         if (right)
@@ -1019,6 +1041,8 @@ void Play()
     bool second_over_regular_2 = true;
     bool second_over_armored_2 = true;
     bool second_over_fast_2 = true;
+    int x, y;
+
     while (true)
     {
         // Gets the current time and draws the background
@@ -1029,30 +1053,40 @@ void Play()
         LCD.DrawRectangle(40, 220, 240, 19);
         LCD.FillRectangle(40, 220, 240, 19);
 
-        // If "A" or left arrow key is clicked, the moveLeft function is called
-        if ((GetAsyncKeyState(0x41) | GetAsyncKeyState(0x25)) & 0x8000)
+        LCD.Touch(&x, &y, false);
+
+        if (x < player.CollisionBox().x1)
         {
-            player.moveLeft();
+            if (y > 220 && y < 230)
+            {
+                player.moveLeft();
+            }
+            else
+            {
+                player.turnLeft();
+            }
         }
 
-        // If "D" or right arrow key is clicked, the moveRight function is called
-        if ((GetAsyncKeyState(0x44) | GetAsyncKeyState(0x27)) & 0x8000)
+        if (x > player.CollisionBox().x2)
         {
-            player.moveRight();
+            if (y > 220 && y < 230)
+            {
+                player.moveRight();
+            }
+            else
+            {
+                player.turnRight();
+            }
         }
 
-        // If "W" or up arrow key is clicked, the jump function is called
-        if ((GetAsyncKeyState(0x57) | GetAsyncKeyState(0x26)) & 0x8000)
+        if (y > 230)
         {
             player.jump();
         }
 
-        // If "CTRL" is clicked, the shoot function is called
-        if (GetAsyncKeyState(0x11) & 0x8000)
-        {
-            player.shoot();
-        }
         player.Draw();
+
+        LCD.SetFontColor(WHITE);
 
         // If 4 seconds have passed, new regular enemy is spawned
         if (time_c % 4 == 0 && second_over_regular)
@@ -1133,19 +1167,51 @@ void Play()
         for (Enemy *enemy : enemies)
         {
             enemy->Draw();
-            // If enemy collides with the bullet and the bullet is supposed to be there
-            if (enemy->CollisionBox().BoxIntersection(player.BulletCollisionBox()) && player.BulletCheck())
+            if (!enemy->Death())
             {
-                kill_count++;
-                enemy->Hit();
-                player.BulletKill();
-            }
+                // If enemy collides with the bullet and the bullet is supposed to be there
+                if (enemy->CollisionBox().BoxIntersection(player.BulletCollisionBox()) && player.BulletCheck())
+                {
+                    kill_count++;
+                    enemy->Hit();
+                    player.BulletKill();
+                }
 
-            // If the enemy collides with the player and hasn't already hit the player before
-            if (enemy->CollisionBox().BoxIntersection(player.CollisionBox()) && !enemy->CheckPlayerHit())
-            {
-                enemy->PlayerHit();
-                player.Hit();
+                // If the enemy collides with the player and hasn't already hit the player before
+                if (enemy->CollisionBox().BoxIntersection(player.CollisionBox()) && !enemy->CheckPlayerHit())
+                {
+                    enemy->PlayerHit();
+                    player.Hit();
+                }
+
+                if (enemy->CollisionBox().PointIntersection(x, y))
+                {
+                    if (enemy->CollisionBox().x1 < player.CollisionBox().x1)
+                    {
+                        player.turnLeft();
+                        if (x > 170)
+                        {
+                            player.enemyTurn(false);
+                        }
+                        else
+                        {
+                            player.enemyTurn(true);
+                        }
+                    }
+                    else
+                    {
+                        player.turnRight();
+                        if (x < 150)
+                        {
+                            player.enemyTurn(false);
+                        }
+                        else
+                        {
+                            player.enemyTurn(true);
+                        }
+                    }
+                    player.shoot();
+                }
             }
         }
 
@@ -1158,7 +1224,7 @@ void Play()
         }
 
         // Slight pause to keep the while loop from overloading
-        Sleep(10);
+        Sleep(15);
     }
 
     // Score is calculated
@@ -1243,13 +1309,13 @@ void Instructions()
     LCD.SetFontColor(WHITE);
     WriteCenter("INSTRUCTIONS", 10);
     WriteCenter("__________________________", 20);
-    WriteCenter("Use W A D or arrow keys to", 50);
-    WriteCenter("move and CTRL to shoot.", 70);
-    WriteCenter("Kill enemies and survive", 90);
-    WriteCenter("as long as possible to get", 110);
-    WriteCenter("a high score.", 130);
-    WriteCenter("You have 5 hearts.", 150);
-    WriteCenter("Good luck!", 170);
+    WriteCenter("Hover to the right/left of", 50);
+    WriteCenter("the player on the white", 70);
+    WriteCenter("platform to move. Hover", 90);
+    WriteCenter("over enemies to kill them.", 110);
+    WriteCenter("Hover over health bar to", 130);
+    WriteCenter("jump. You have 5 hearts.", 150);
+    WriteCenter("Kill and survive to score.", 170);
 
     // Create and check a back button to return to the main menu
     BackButtonCheck();
